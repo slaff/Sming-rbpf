@@ -1,8 +1,10 @@
 #include <SmingCore.h>
 
 #include <rbpf.h>
-#include <increment.h>
-#include <int64/multiply.h>
+
+// Each function declares a context structure for parameter passing
+#include <container/increment.h>
+#include <container/multiply.h>
 
 namespace
 {
@@ -32,7 +34,7 @@ void test_multiply()
 		.input2 = 120000023,
 	};
 	rBPF::VirtualMachine vm;
-	auto res = vm.execute(rBPF::Container::int64_multiply, ctx);
+	auto res = vm.execute(rBPF::Container::multiply, ctx);
 	if(vm.getLastError() == 0) {
 		Serial.print(_F("input ("));
 		Serial.print(ctx.input1);

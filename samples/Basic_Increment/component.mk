@@ -1,5 +1,5 @@
 COMPONENT_DEPENDS := rbpf
 DISABLE_NETWORK := 1
-COMPONENT_INCDIRS := container
 
-# RBPF_CONTAINER_PATH := container
+# We require access to container header files which define shared structures
+COMPONENT_INCDIRS := container/include
