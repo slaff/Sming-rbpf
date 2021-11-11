@@ -1,53 +1,42 @@
 include $(SMING_HOME)/util.mk
 
-ifeq (,$(RBPF_BLOBDIR))
-$(error RBPF_BLOBDIR undefined)
+ifeq (,$(RBPF_OUTDIR))
+$(error RBPF_OUTDIR undefined)
 endif
-ifeq (,$(RBPF_INCDIR))
-$(error RBPF_INCDIR undefined)
-endif
+
+RBPF_OBJDIR := $(RBPF_OUTDIR)/obj
+RBPF_INCDIR := $(RBPF_OUTDIR)/include
 
 # Obtain blob file path
 # $1 -> source file(s)
 define BlobFile
-$(addprefix $(RBPF_BLOBDIR)/,$(patsubst %,%.bin,$(basename $1)))
+$(addprefix $(RBPF_OBJDIR)/,$(patsubst %,%.bin,$(basename $1)))
 endef
 
 # List of relative paths to source files
 RBPF_SOURCES	:= $(patsubst $(CURDIR)/%,%,$(call ListAllFiles,$(CURDIR),*.c *.cpp))
 # Header file for all defined containers
 RBPF_INCFILE	:= $(RBPF_INCDIR)/rbpf/containers.h
+# Source file with actual blob imports
+RBPF_SRCFILE	:= $(RBPF_OUTDIR)/containers.cpp
 
 LLC ?= llc
 CLANG ?= clang
-XXD ?= xxd
-INC_FLAGS = -nostdinc -isystem `$(CLANG) -print-file-name=include`
-EXTRA_CFLAGS ?= -Os -emit-llvm
 
 all: blobs
 
-.PHONY: clean
-
-clean:
-	$(Q) rm -rf $(RBPF_BLOBDIR) $(RBPF_INCDIR)
-
-INC_FLAGS = -nostdinc -isystem `$(CLANG) -print-file-name=include`
-
-# Generated build targets
+# Generate build targets
 # $1 -> Source file
 # $2 -> Blob file
 define GenerateTarget
-$(2:.bin=.o): $1
+TARGET_BC := $(2:.bin=.bc) # Clang bytecode
+TARGET_OBJ := $(2:.bin=.obj) # llvm BPF object code
+$$(TARGET_BC): $1
 	$(Q) mkdir -p $$(@D)
-	$(Q) $$(CLANG) \
-		$$(INC_FLAGS) \
-		-Wno-unused-value -Wno-pointer-sign -g3\
-		-Wno-compare-distinct-pointer-types \
-		-Wno-gnu-variable-sized-type-not-at-end \
-		-Wno-address-of-packed-member -Wno-tautological-compare \
-		-Wno-unknown-warning-option \
-		$$(EXTRA_CFLAGS) -c $$< -o -| $$(LLC) -march=bpf -mcpu=v2 -filetype=obj -o $$@
-$2: $(2:.bin=.o)
+	$(Q) $$(CLANG) -Wall -Wextra -Werror -g3 -Os -emit-llvm -c $$< -o $$@
+$$(TARGET_OBJ): $$(TARGET_BC)
+	$(Q) $$(LLC) -march=bpf -mcpu=v2 -filetype=obj -o $$@ $$<
+$2: $$(TARGET_OBJ)
 	$$(RBPF_GENRBF) generate $$< $$@
 endef
 $(foreach f,$(RBPF_SOURCES),$(eval $(call GenerateTarget,$f,$(call BlobFile,$f))))
@@ -62,7 +51,7 @@ endef
 # Generate code for header file
 # $1 -> source file
 define GenerateHeader
-@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, \"$(call BlobFile,$1)\")\n" >> $@
+@printf "DECLARE_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t)\n" >> $@
 
 endef
 
@@ -78,9 +67,43 @@ $(RBPF_INCFILE): $(call BlobFile,$(RBPF_SOURCES))
 	@echo "} // namespace rBPF" >> $@
 
 
+# Generate code for BLOB source file
+# $1 -> source file
+define GenerateSource
+@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, \"$(call BlobFile,$1)\")\n" >> $@
+
+endef
+
+$(RBPF_SRCFILE): $(call BlobFile,$(RBPF_SOURCES))
+	@echo "#include <FlashString/Array.hpp>" >> $@
+	@echo "" >> $@
+	@echo "namespace rBPF {" >> $@
+	@echo "namespace Container {" >> $@
+	$(foreach f,$(RBPF_SOURCES),$(call GenerateSource,$f))
+	@echo "} // namespace Container" >> $@
+	@echo "} // namespace rBPF" >> $@
+
+
 .PHONY: blobs
-blobs: $(RBPF_INCFILE)
+blobs: $(RBPF_INCFILE) $(RBPF_SRCFILE) | $(RBPF_INCDIR) $(RBPF_OBJDIR)
+
+$(RBPF_INCDIR) $(RBPF_OBJDIR):
+	$(Q) mkdir -p $@
+
+#
+# $1 -> Path to blob
+define DumpBlob
+@echo Contents of \"$(patsubst $(RBPF_OBJDIR)/%,%,$1)\"
+@echo -----------------------------
+@$(RBPF_GENRBF) dump $1
+@echo ""
+
+endef
 
 .PHONY: dump
 dump: blobs
-	$(RBPF_GENRBF) dump $< 
+	$(foreach f,$(call BlobFile,$(RBPF_SOURCES)),$(call DumpBlob,$f))
+
+.PHONY: clean
+clean:
+	$(Q) rm -rf $(RBPF_OUTDIR)

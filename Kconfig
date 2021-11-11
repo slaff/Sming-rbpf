@@ -1,0 +1,6 @@
+menu "rBPF"
+    config RBPF_CONTAINER_PATH
+        string "Location of container source code"
+        default "container"
+
+endmenu
