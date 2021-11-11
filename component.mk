@@ -37,8 +37,8 @@ rbpf-blobs: | $(RBPF_CONTAINER_PATH) ##Compile container objects
 rbpf-blobs-clean: ##Remove generated rBPF files
 	$(Q) $(RBPF_MAKE) clean
 
-.PHONY: rbpf-blobs-dump
-rbpf-blobs-dump: ##Show container application
+.PHONY: rbpf-dump
+rbpf-dump: ##Dump contents of compiled container applications
 	$(Q) $(RBPF_MAKE) dump
 
 COMPONENT_PREREQUISITES := rbpf-blobs

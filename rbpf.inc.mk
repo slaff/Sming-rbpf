@@ -90,9 +90,19 @@ blobs: $(RBPF_INCFILE) $(RBPF_SRCFILE) | $(RBPF_INCDIR) $(RBPF_OBJDIR)
 $(RBPF_INCDIR) $(RBPF_OBJDIR):
 	$(Q) mkdir -p $@
 
+#
+# $1 -> Path to blob
+define DumpBlob
+@echo Contents of \"$(patsubst $(RBPF_OBJDIR)/%,%,$1)\"
+@echo -----------------------------
+@$(RBPF_GENRBF) dump $1
+@echo ""
+
+endef
+
 .PHONY: dump
 dump: blobs
-	$(RBPF_GENRBF) dump $< 
+	$(foreach f,$(call BlobFile,$(RBPF_SOURCES)),$(call DumpBlob,$f))
 
 .PHONY: clean
 clean:
