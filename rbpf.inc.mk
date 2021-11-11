@@ -22,34 +22,21 @@ RBPF_SRCFILE	:= $(RBPF_OUTDIR)/containers.cpp
 
 LLC ?= llc
 CLANG ?= clang
-XXD ?= xxd
-INC_FLAGS = -nostdinc -isystem `$(CLANG) -print-file-name=include`
-EXTRA_CFLAGS ?= -Os -emit-llvm
 
 all: blobs
 
-.PHONY: clean
-
-clean:
-	$(Q) rm -rf $(RBPF_OUTDIR)
-
-INC_FLAGS = -nostdinc -isystem `$(CLANG) -print-file-name=include`
-
-# Generated build targets
+# Generate build targets
 # $1 -> Source file
 # $2 -> Blob file
 define GenerateTarget
-$(2:.bin=.o): $1
+TARGET_BC := $(2:.bin=.bc) # Clang bytecode
+TARGET_OBJ := $(2:.bin=.obj) # llvm BPF object code
+$$(TARGET_BC): $1
 	$(Q) mkdir -p $$(@D)
-	$(Q) $$(CLANG) \
-		$$(INC_FLAGS) \
-		-Wno-unused-value -Wno-pointer-sign -g3\
-		-Wno-compare-distinct-pointer-types \
-		-Wno-gnu-variable-sized-type-not-at-end \
-		-Wno-address-of-packed-member -Wno-tautological-compare \
-		-Wno-unknown-warning-option \
-		$$(EXTRA_CFLAGS) -c $$< -o -| $$(LLC) -march=bpf -mcpu=v2 -filetype=obj -o $$@
-$2: $(2:.bin=.o)
+	$(Q) $$(CLANG) -Wall -Wextra -Werror -g3 -Os -emit-llvm -c $$< -o $$@
+$$(TARGET_OBJ): $$(TARGET_BC)
+	$(Q) $$(LLC) -march=bpf -mcpu=v2 -filetype=obj -o $$@ $$<
+$2: $$(TARGET_OBJ)
 	$$(RBPF_GENRBF) generate $$< $$@
 endef
 $(foreach f,$(RBPF_SOURCES),$(eval $(call GenerateTarget,$f,$(call BlobFile,$f))))
@@ -80,7 +67,7 @@ $(RBPF_INCFILE): $(call BlobFile,$(RBPF_SOURCES))
 	@echo "} // namespace rBPF" >> $@
 
 
-# Generate code for source file
+# Generate code for BLOB source file
 # $1 -> source file
 define GenerateSource
 @printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, \"$(call BlobFile,$1)\")\n" >> $@
@@ -106,3 +93,7 @@ $(RBPF_INCDIR) $(RBPF_OBJDIR):
 .PHONY: dump
 dump: blobs
 	$(RBPF_GENRBF) dump $< 
+
+.PHONY: clean
+clean:
+	$(Q) rm -rf $(RBPF_OUTDIR)
