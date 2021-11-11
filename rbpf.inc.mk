@@ -66,7 +66,7 @@ $(RBPF_INCFILE): $(call BlobFile,$(RBPF_SOURCES))
 # Generate code for BLOB source file
 # $1 -> source file
 define GenerateSource
-@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, \"$(call BlobFile,$1)\")\n" >> $@
+@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, $(patsubst $(PROJECT_DIR)/%,PROJECT_DIR \"/%\",$(call BlobFile,$1)))\n" >> $@
 
 endef
 
