@@ -18,7 +18,7 @@ endif
 COMPONENT_DOXYGEN_INPUT := src/include
 
 RBPF_COMPONENT_PATH := $(COMPONENT_PATH)
-export RBPF_GENRBF := $(COMPONENT_PATH)/tools/gen_rbf.py
+export RBPF_GENRBF := $(PYTHON) $(COMPONENT_PATH)/tools/gen_rbf.py
 
 # The folder where the container application source code is stored.
 RBPF_CONTAINER_PATH ?= $(PROJECT_DIR)/container
