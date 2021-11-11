@@ -24,6 +24,11 @@ CLANG ?= clang
 
 all: blobs
 
+INC_FLAGS = \
+	-nostdinc \
+	-isystem `$(CLANG) -print-file-name=include` \
+	-I$(dir $(firstword $(MAKEFILE_LIST)))bpf/include
+
 # Generate build targets
 # $1 -> Source file
 # $2 -> Blob file
@@ -31,7 +36,7 @@ define GenerateTarget
 TARGET_OBJ := $(2:.bin=.obj)
 $$(TARGET_OBJ): $1
 	$(Q) mkdir -p $$(@D)
-	$(Q) $$(CLANG) -Wall -Wextra -g3 -Os -target bpf -c $$< -o $$@
+	$(Q) $$(CLANG) -Wall -Wextra -g3 -Os $$(INC_FLAGS) -target bpf -c $$< -o $$@
 $2: $$(TARGET_OBJ)
 	$$(RBPF_GENRBF) generate $$< $$@
 endef

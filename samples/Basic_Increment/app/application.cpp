@@ -18,8 +18,8 @@ void test_increment()
 	increment_context_t ctx{
 		.value = 0,
 	};
-	rBPF::VirtualMachine vm;
-	auto res = vm.execute(rBPF::Container::increment, ctx);
+	rBPF::VirtualMachine vm(rBPF::Container::increment);
+	auto res = vm.execute(ctx);
 	if(vm.getLastError() == 0) {
 		Serial.print(_F("input "));
 		Serial.print(ctx.value);
@@ -41,8 +41,8 @@ void test_multiply()
 		.input1 = 120000005,
 		.input2 = 120000023,
 	};
-	rBPF::VirtualMachine vm;
-	auto res = vm.execute(rBPF::Container::multiply, ctx);
+	rBPF::VirtualMachine vm(rBPF::Container::multiply);
+	auto res = vm.execute(ctx);
 	if(vm.getLastError() == 0) {
 		Serial.print(_F("input ("));
 		Serial.print(ctx.input1);
@@ -57,6 +57,31 @@ void test_multiply()
 	}
 }
 
+/*
+ * Test data exchange using key stores
+ */
+void test_store()
+{
+	Serial.println(F("Calling 'store()' in VM"));
+	rBPF::VirtualMachine vm(rBPF::Container::store);
+	vm.globals.update(1, 1234);
+	vm.locals.update(2, 5678);
+	auto res = vm.execute(nullptr, 0);
+	if(vm.getLastError() == 0) {
+		Serial.print(_F("output ("));
+		Serial.print(vm.globals.get(1, 0));
+		Serial.print(", ");
+		Serial.print(vm.locals.get(2, 0));
+		uint32_t value1 = res >> 32;
+		uint32_t value2 = res;
+		Serial.print(_F("), result ("));
+		Serial.print(value1);
+		Serial.print(", ");
+		Serial.print(value2);
+		Serial.println(")");
+	}
+}
+
 } // namespace
 
 void init()
@@ -68,4 +93,5 @@ void init()
 
 	test_increment();
 	test_multiply();
+	test_store();
 }

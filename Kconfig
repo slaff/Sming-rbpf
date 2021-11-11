@@ -3,4 +3,10 @@ menu "rBPF"
         string "Location of container source code"
         default "container"
 
+    config BPF_STORE_NUM_VALUES
+        int "Maximum number of stored values"
+        default 16
+        help
+            Space is shared between all stores (global and local).
+
 endmenu
