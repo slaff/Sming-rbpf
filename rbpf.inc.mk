@@ -31,7 +31,7 @@ define GenerateTarget
 TARGET_OBJ := $(2:.bin=.obj)
 $$(TARGET_OBJ): $1
 	$(Q) mkdir -p $$(@D)
-	$(Q) $$(CLANG) -Wall -Wextra -Werror -g3 -Os -target bpf -c $$< -o $$@
+	$(Q) $$(CLANG) -Wall -Wextra -g3 -Os -target bpf -c $$< -o $$@
 $2: $$(TARGET_OBJ)
 	$$(RBPF_GENRBF) generate $$< $$@
 endef
