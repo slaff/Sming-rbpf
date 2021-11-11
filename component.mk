@@ -15,6 +15,8 @@ else
   COMPONENT_SRCFILES += bpf/option/instruction.c
 endif
 
+COMPONENT_DOXYGEN_INPUT := src/include
+
 RBPF_COMPONENT_PATH := $(COMPONENT_PATH)
 export RBPF_GENRBF := $(COMPONENT_PATH)/tools/gen_rbf.py
 

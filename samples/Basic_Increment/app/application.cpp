@@ -1,5 +1,6 @@
 #include <SmingCore.h>
 
+// Single include required to use rBPF
 #include <rbpf.h>
 
 // Each function declares a context structure for parameter passing
@@ -8,6 +9,9 @@
 
 namespace
 {
+/**
+ * Adds 1 to the input value and returns it from the function.
+ */
 void test_increment()
 {
 	Serial.println(F("Calling 'increment()' in VM"));
@@ -26,6 +30,10 @@ void test_increment()
 	}
 }
 
+/*
+ * Demonstrates using the context block to return output parameters.
+ * The function always returns 0.
+ */
 void test_multiply()
 {
 	Serial.println(F("Calling 'multiply()' in VM"));
