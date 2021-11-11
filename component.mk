@@ -1,10 +1,12 @@
 COMPONENT_INCDIRS := \
+	src/include \
 	bpf/include
 
 COMPONENT_RELINK_VARS := BPF_USE_JUMPTABLE
 BPF_USE_JUMPTABLE := 1
 
 COMPONENT_SRCDIRS := \
+	src \
 	bpf
 
 ifeq ($(BPF_USE_JUMPTABLE),1)
