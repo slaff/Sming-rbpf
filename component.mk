@@ -21,27 +21,23 @@ RBPF_CONTAINER_PATH ?= $(PROJECT_DIR)/container
 
 ##@rBPF containers
 
-export RBPF_BLOBDIR	:= $(PROJECT_DIR)/out/rbpf/obj
-export RBPF_INCDIR	:= $(PROJECT_DIR)/out/rbpf/include
-COMPONENT_INCDIRS	+= $(RBPF_INCDIR)
+export RBPF_OUTDIR	:= $(PROJECT_DIR)/out/rbpf
+COMPONENT_INCDIRS	+= $(RBPF_OUTDIR)/include
+COMPONENT_APPCODE	:= $(RBPF_OUTDIR)
 
 RBPF_MAKE = $(MAKE) -C $(RBPF_CONTAINER_PATH) --no-print-directory -f $(RBPF_COMPONENT_PATH)/rbpf.inc.mk
 
 .PHONY: rbpf-blobs
-rbpf-blobs: | $(RBPF_CONTAINER_PATH) $(RBPF_BLOBDIR) ##Compile container objects
+rbpf-blobs: | $(RBPF_CONTAINER_PATH) ##Compile container objects
 	$(Q) $(RBPF_MAKE) blobs
 
 .PHONY: rbpf-blobs-clean
 rbpf-blobs-clean: ##Remove generated rBPF files
-	$(Q) rm -rf $(RBPF_BLOBDIR)
 	$(Q) $(RBPF_MAKE) clean
 
 .PHONY: rbpf-blobs-dump
 rbpf-blobs-dump: ##Show container application
 	$(Q) $(RBPF_MAKE) dump
-
-$(RBPF_BLOBDIR):
-	$(Q) mkdir -p $@
 
 COMPONENT_PREREQUISITES := rbpf-blobs
 

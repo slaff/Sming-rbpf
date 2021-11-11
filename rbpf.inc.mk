@@ -1,22 +1,24 @@
 include $(SMING_HOME)/util.mk
 
-ifeq (,$(RBPF_BLOBDIR))
-$(error RBPF_BLOBDIR undefined)
+ifeq (,$(RBPF_OUTDIR))
+$(error RBPF_OUTDIR undefined)
 endif
-ifeq (,$(RBPF_INCDIR))
-$(error RBPF_INCDIR undefined)
-endif
+
+RBPF_OBJDIR := $(RBPF_OUTDIR)/obj
+RBPF_INCDIR := $(RBPF_OUTDIR)/include
 
 # Obtain blob file path
 # $1 -> source file(s)
 define BlobFile
-$(addprefix $(RBPF_BLOBDIR)/,$(patsubst %,%.bin,$(basename $1)))
+$(addprefix $(RBPF_OBJDIR)/,$(patsubst %,%.bin,$(basename $1)))
 endef
 
 # List of relative paths to source files
 RBPF_SOURCES	:= $(patsubst $(CURDIR)/%,%,$(call ListAllFiles,$(CURDIR),*.c *.cpp))
 # Header file for all defined containers
 RBPF_INCFILE	:= $(RBPF_INCDIR)/rbpf/containers.h
+# Source file with actual blob imports
+RBPF_SRCFILE	:= $(RBPF_OUTDIR)/containers.cpp
 
 LLC ?= llc
 CLANG ?= clang
@@ -29,7 +31,7 @@ all: blobs
 .PHONY: clean
 
 clean:
-	$(Q) rm -rf $(RBPF_BLOBDIR) $(RBPF_INCDIR)
+	$(Q) rm -rf $(RBPF_OUTDIR)
 
 INC_FLAGS = -nostdinc -isystem `$(CLANG) -print-file-name=include`
 
@@ -62,7 +64,7 @@ endef
 # Generate code for header file
 # $1 -> source file
 define GenerateHeader
-@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, \"$(call BlobFile,$1)\")\n" >> $@
+@printf "DECLARE_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t)\n" >> $@
 
 endef
 
@@ -78,8 +80,28 @@ $(RBPF_INCFILE): $(call BlobFile,$(RBPF_SOURCES))
 	@echo "} // namespace rBPF" >> $@
 
 
+# Generate code for source file
+# $1 -> source file
+define GenerateSource
+@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, \"$(call BlobFile,$1)\")\n" >> $@
+
+endef
+
+$(RBPF_SRCFILE): $(call BlobFile,$(RBPF_SOURCES))
+	@echo "#include <FlashString/Array.hpp>" >> $@
+	@echo "" >> $@
+	@echo "namespace rBPF {" >> $@
+	@echo "namespace Container {" >> $@
+	$(foreach f,$(RBPF_SOURCES),$(call GenerateSource,$f))
+	@echo "} // namespace Container" >> $@
+	@echo "} // namespace rBPF" >> $@
+
+
 .PHONY: blobs
-blobs: $(RBPF_INCFILE)
+blobs: $(RBPF_INCFILE) $(RBPF_SRCFILE) | $(RBPF_INCDIR) $(RBPF_OBJDIR)
+
+$(RBPF_INCDIR) $(RBPF_OBJDIR):
+	$(Q) mkdir -p $@
 
 .PHONY: dump
 dump: blobs
