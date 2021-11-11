@@ -45,4 +45,6 @@ $(RBPF_BLOBDIR):
 
 COMPONENT_PREREQUISITES := rbpf-blobs
 
+ifndef MAKE_DOCS
 clean: rbpf-blobs-clean
+endif
