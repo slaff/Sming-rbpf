@@ -71,7 +71,7 @@ define GenerateSource
 endef
 
 $(RBPF_SRCFILE): $(call BlobFile,$(RBPF_SOURCES))
-	@echo "#include <FlashString/Array.hpp>" >> $@
+	@echo "#include <FlashString/Array.hpp>" > $@
 	@echo "" >> $@
 	@echo "namespace rBPF {" >> $@
 	@echo "namespace Container {" >> $@
