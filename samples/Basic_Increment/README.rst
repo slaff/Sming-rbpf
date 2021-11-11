@@ -20,9 +20,9 @@ This step describes the additional requements needed to compile
 and execute the sample presented here. The following applications and
 libraries are required:
 
-	- LLVM
-	- Clang
-	- `pyelftools <https://github.com/eliben/pyelftools>`_
+- LLVM
+- Clang
+- `pyelftools <https://github.com/eliben/pyelftools>`_
 
 On Ubuntu the following two commands will install the needed toolchain and python dependencies::
 

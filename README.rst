@@ -20,7 +20,7 @@ itself is event triggered and executes a small application to respond to the
 event.
 
 The virtual machine architecture is standardized in the Linux kernel, with the
-RIOT implementation following the [ISA](https://github.com/iovisor/bpf-docs/blob/master/eBPF.md) defined for Linux.
+RIOT implementation following the `ISA <https://github.com/iovisor/bpf-docs/blob/master/eBPF.md>`_ defined for Linux.
 
 Security
 ~~~~~~~~
@@ -93,4 +93,4 @@ sharing values between instances.
 See also
 --------
 
-[rBPF paper](https://hal.inria.fr/hal-03019639)
+`rBPF paper <https://hal.inria.fr/hal-03019639>`_.
