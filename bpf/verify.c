@@ -52,22 +52,23 @@ int bpf_verify_preflight(bpf_t *bpf)
     }
 
 
-    for (const bpf_instruction_t *i = application;
+    for (const bpf_instruction_t *i= application;
             i < (bpf_instruction_t*)((uint8_t*)application + length); i++) {
+        bpf_instruction_t inst = GET_INSTRUCTION(i);
         /* Check if register values are valid */
-        if (i->dst >= 11 || i->src >= 11) {
+        if (inst.dst >= 11 || inst.src >= 11) {
             return BPF_ILLEGAL_REGISTER;
         }
 
         /* Double length instruction */
-        if (i->opcode == 0x18) {
+        if (inst.opcode == 0x18) {
             i++;
             continue;
         }
 
         /* Only instruction-specific checks here */
-        if ((i->opcode & BPF_INSTRUCTION_CLS_MASK) == BPF_INSTRUCTION_CLS_BRANCH) {
-            intptr_t target = (intptr_t)(i + i->offset);
+        if ((inst.opcode & BPF_INSTRUCTION_CLS_MASK) == BPF_INSTRUCTION_CLS_BRANCH) {
+            intptr_t target = (intptr_t)(i + inst.offset);
             /* Check if the jump target is within bounds. The address is
              * incremented after the jump by the regular PC increase */
             if ((target >= (intptr_t)((uint8_t*)application + length))
@@ -76,8 +77,8 @@ int bpf_verify_preflight(bpf_t *bpf)
             }
         }
 
-        if (i->opcode == (BPF_INSTRUCTION_BRANCH_CALL | BPF_INSTRUCTION_CLS_BRANCH)) {
-            if (!_bpf_check_call(i->immediate)) {
+        if (inst.opcode == (BPF_INSTRUCTION_BRANCH_CALL | BPF_INSTRUCTION_CLS_BRANCH)) {
+            if (!_bpf_check_call(inst.immediate)) {
                 return BPF_ILLEGAL_CALL;
             }
         }
@@ -86,7 +87,8 @@ int bpf_verify_preflight(bpf_t *bpf)
     size_t num_instructions = length/sizeof(bpf_instruction_t);
 
     /* Check if the last instruction is a return instruction */
-    if (application[num_instructions - 1].opcode != 0x95 && !(bpf->flags & BPF_CONFIG_NO_RETURN)) {
+    bpf_instruction_t inst = GET_INSTRUCTION(&application[num_instructions - 1]);
+    if (inst.opcode != 0x95 && !(bpf->flags & BPF_CONFIG_NO_RETURN)) {
         return BPF_NO_RETURN;
     }
     bpf->flags |= BPF_FLAG_PREFLIGHT_DONE;

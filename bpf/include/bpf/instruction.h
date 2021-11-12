@@ -94,6 +94,16 @@ typedef struct __attribute__((packed)) {
     int32_t immediate;
 } bpf_instruction_t;
 
+/*
+ * Make use of  strict volatile bitfield access to ensure flash accesses are aligned.
+ */
+typedef union {
+    uint64_t value;
+    bpf_instruction_t inst;
+} bpf_instruction_ptr_t;
+
+#define GET_INSTRUCTION(p) (((const volatile bpf_instruction_ptr_t*)(p))->inst)
+
 #ifdef __cplusplus
 }
 #endif

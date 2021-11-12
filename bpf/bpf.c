@@ -65,12 +65,12 @@ void bpf_setup(bpf_t *bpf)
     bpf->stack_region.next = &bpf->data_region;
 
     bpf->data_region.start = rbpf_data(bpf);
-    bpf->data_region.len = rbpf_header(bpf)->data_len;
+    bpf->data_region.len = rbpf_header(bpf).data_len;
     bpf->data_region.flag = (BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE);
     bpf->data_region.next = &bpf->rodata_region;
 
     bpf->rodata_region.start = rbpf_rodata(bpf);
-    bpf->rodata_region.len = rbpf_header(bpf)->rodata_len;
+    bpf->rodata_region.len = rbpf_header(bpf).rodata_len;
     bpf->rodata_region.flag = BPF_MEM_REGION_READ;
     bpf->rodata_region.next = &bpf->arg_region;
 

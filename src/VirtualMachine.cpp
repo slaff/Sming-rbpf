@@ -41,36 +41,34 @@ String getErrorString(int error)
 	}
 };
 
-bool VirtualMachine::init(const Container& container)
+VirtualMachine::VirtualMachine() : locals(*this)
+{
+}
+
+VirtualMachine::~VirtualMachine()
+{
+}
+
+bool VirtualMachine::load(const Container& container)
 {
 	check_init();
 
-	appBinary.reset(new uint8_t[container.size()]);
-	if(!appBinary) {
-		return false;
-	}
-	container.readFlash(0, appBinary.get(), container.size());
+	this->container = &container;
 
-	inst.reset(new uint8_t[sizeof(bpf_t)]);
-	if(!inst) {
-		return false;
-	}
-
-	// auto bpf = reinterpret_cast<bpf_t*>(inst.get());
-	auto bpf = new(inst.get()) bpf_t({
-		.application = appBinary.get(),
+	inst.reset(new struct bpf_s({
+		.application = container.data(),
 		.application_len = container.length(),
 		.stack = stack,
 		.stack_size = sizeof(stack),
-	});
+	}));
 
-	bpf_setup(bpf);
+	bpf_setup(inst.get());
 	return true;
 }
 
 int64_t VirtualMachine::execute(void* ctx, size_t ctxLength)
 {
-	if(!appBinary || !inst) {
+	if(!inst) {
 		return RBPF_NO_MEMORY;
 	}
 

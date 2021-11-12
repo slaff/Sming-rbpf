@@ -5,6 +5,8 @@
 #include "Store.h"
 #include <memory>
 
+struct bpf_s;
+
 namespace rBPF
 {
 /**
@@ -18,13 +20,22 @@ public:
 	using Container = FSTR::Array<uint8_t>;
 
 	/**
-     * @name Create a container
+	 * @brief Create an uninitialised VM
+	 */
+	VirtualMachine();
+
+	/**
+     * @name Create a VM and load a container
      * @param container Container code blob
      */
-	VirtualMachine(const Container& container) : locals(*this)
+	VirtualMachine(const Container& container) : VirtualMachine()
 	{
-		init(container);
+		load(container);
 	}
+
+	~VirtualMachine();
+
+	bool load(const Container& container);
 
 	/**
      * @name Run the container
@@ -60,10 +71,8 @@ public:
 private:
 	friend class LocalStore;
 
-	bool init(const Container& container);
-
-	std::unique_ptr<uint8_t> appBinary;
-	std::unique_ptr<uint8_t> inst;
+	const Container* container{nullptr};
+	std::unique_ptr<struct bpf_s> inst;
 	uint8_t stack[512]{};
 	int lastError{0};
 };

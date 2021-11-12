@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "btree.h"
 
 #ifdef __cplusplus
@@ -104,7 +105,7 @@ struct bpf_mem_region {
 #define BPF_FLAG_PREFLIGHT_DONE    0x02
 #define BPF_CONFIG_NO_RETURN       0x0100 /**< Script doesn't need to have a return */
 
-typedef struct {
+typedef struct bpf_s {
     bpf_mem_region_t stack_region;
     bpf_mem_region_t rodata_region;
     bpf_mem_region_t data_region;
@@ -145,33 +146,32 @@ void bpf_add_region(bpf_t *bpf, bpf_mem_region_t *region,
 int bpf_store_allowed(const bpf_t *bpf, void *addr, size_t size);
 int bpf_load_allowed(const bpf_t *bpf, void *addr, size_t size);
 
-static inline rbpf_header_t *rbpf_header(const bpf_t *bpf)
+static inline rbpf_header_t rbpf_header(const bpf_t *bpf)
 {
-    return (rbpf_header_t*)bpf->application;
+    rbpf_header_t hdr;
+    memcpy(&hdr, bpf->application, sizeof(hdr));
+    return hdr;
 }
 
-static inline void *rbpf_rodata(const bpf_t *bpf)
+static inline const void *rbpf_rodata(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return (uint8_t*)header + sizeof(rbpf_header_t) + header->data_len;
+    return bpf->application + sizeof(rbpf_header_t) + rbpf_header(bpf).data_len;
 }
 
-static inline void *rbpf_data(const bpf_t *bpf)
+static inline const void *rbpf_data(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return (uint8_t*)header + sizeof(rbpf_header_t);
+    return bpf->application + sizeof(rbpf_header_t);
 }
 
-static inline void *rbpf_text(const bpf_t *bpf)
+static inline const void *rbpf_text(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return (uint8_t*)header + sizeof(rbpf_header_t) + header->data_len + header->rodata_len;
+    rbpf_header_t header = rbpf_header(bpf);
+    return bpf->application + sizeof(rbpf_header_t) + header.data_len + header.rodata_len;
 }
 
 static inline size_t rbpf_text_len(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return header->text_len;
+    return rbpf_header(bpf).text_len;
 }
 
 #ifdef __cplusplus

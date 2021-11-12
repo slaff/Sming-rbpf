@@ -115,9 +115,9 @@ static bpf_call_t _bpf_get_call(uint32_t num)
  */
 
 /* Macro for the destination, source and immediate value */
-#define DST regmap[instr->dst] /* DST is the register targeted by the instruction */
-#define SRC regmap[instr->src] /* SRC is the source register from the instruction */
-#define IMM instr->immediate   /* And this one matches the immediate value in the instruction */
+#define DST regmap[instr.dst] /* DST is the register targeted by the instruction */
+#define SRC regmap[instr.src] /* SRC is the source register from the instruction */
+#define IMM instr.immediate   /* And this one matches the immediate value in the instruction */
 
 /* Two macros that jump to the start of the instruction pipeline. */
 #define CONT       { goto select_instr; } /* Continue execution with the next one */
@@ -209,7 +209,8 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
     regmap[10] = (uint64_t)(uintptr_t)(bpf->stack + bpf->stack_size);
 
 
-    const bpf_instruction_t *instr = (const bpf_instruction_t*)rbpf_text(bpf);
+    const volatile bpf_instruction_t *pc = (const volatile bpf_instruction_t*)rbpf_text(bpf);
+    bpf_instruction_t instr;
     bool jump_cond = false;
 
     res = bpf_verify_preflight(bpf);
@@ -218,7 +219,7 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
     }
 
     /* Create an instruction jumptable with calculated addresses for the goto */
-    static const void * const _jumptable[256] = {
+    static const void * const _jumptable[256] PROGMEM = {
         [0 ... 255] = &&invalid_instruction,
         ALU_OPCODE(ADD, 0x00),
         ALU_OPCODE(SUB, 0x10),
@@ -263,8 +264,9 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
     goto bpf_start;
 
 jump_instr:
+    instr = GET_INSTRUCTION(pc);
     if (jump_cond) {
-        instr += instr->offset;
+        pc += instr.offset;
         if ((!(bpf->flags & BPF_CONFIG_NO_RETURN)) &&
                 bpf->branches_remaining-- == 0) {
             res = BPF_OUT_OF_BRANCHES;
@@ -274,10 +276,11 @@ jump_instr:
 
     /* Intentionally falls through to select_instr */
 select_instr:
-    instr++;
+    pc++;
 bpf_start:
+    instr = GET_INSTRUCTION(pc);
     //bpf->instruction_count++;
-    goto *_jumptable[instr->opcode];
+    goto *_jumptable[instr.opcode];
 
 /* Macros implementing the instruction code for the simple ALU based operations */
     ALU(ADD,  +)
@@ -392,43 +395,43 @@ ALU32_ARSH_IMM:
 #endif
 
 MEM_LDDW_IMM:
-    DST = (uint64_t)instr->immediate;
-    DST |= ((uint64_t)((instr+1)->immediate)) << 32;
-    instr++;
+    DST = (uint64_t)instr.immediate;
+    DST |= (uint64_t)(GET_INSTRUCTION(pc + 1).immediate) << 32;
+    pc++;
     CONT;
 
 MEM_LDDWD_IMM:
     DST = (intptr_t)rbpf_data(bpf);
-    DST += (uint64_t)instr->immediate;
-    DST += ((uint64_t)((instr+1)->immediate)) << 32;
-    instr++;
+    DST += (uint64_t)instr.immediate;
+    DST += (uint64_t)(GET_INSTRUCTION(pc + 1).immediate) << 32;
+    pc++;
     CONT;
 
 MEM_LDDWR_IMM:
     DST = (intptr_t)rbpf_rodata(bpf);
-    DST += (uint64_t)instr->immediate;
-    DST += ((uint64_t)((instr+1)->immediate)) << 32;
-    instr++;
+    DST += (uint64_t)instr.immediate;
+    DST += (uint64_t)(GET_INSTRUCTION(pc + 1).immediate) << 32;
+    pc++;
     CONT;
 
 #define MEM(SIZEOP, SIZE)                     \
       MEM_STX_##SIZEOP:                       \
-          if (_check_store(bpf, sizeof(SIZE), DST + instr->offset) < 0) { \
+          if (_check_store(bpf, sizeof(SIZE), DST + instr.offset) < 0) { \
               goto mem_error; \
           } \
-          *(SIZE *)(uintptr_t)(DST + instr->offset) = SRC;   \
+          *(SIZE *)(uintptr_t)(DST + instr.offset) = SRC;   \
           CONT;                               \
       MEM_ST_##SIZEOP:                        \
-          if (_check_store(bpf, sizeof(SIZE), DST + instr->offset) < 0) { \
+          if (_check_store(bpf, sizeof(SIZE), DST + instr.offset) < 0) { \
               goto mem_error; \
           } \
-          *(SIZE *)(uintptr_t)(DST + instr->offset) = IMM;   \
+          *(SIZE *)(uintptr_t)(DST + instr.offset) = IMM;   \
           CONT;                               \
       MEM_LDX_##SIZEOP:                       \
-          if (_check_load(bpf, sizeof(SIZE), SRC + instr->offset) < 0) { \
+          if (_check_load(bpf, sizeof(SIZE), SRC + instr.offset) < 0) { \
               goto mem_error; \
           } \
-          DST = *(const SIZE *)(uintptr_t)(SRC + instr->offset);   \
+          DST = *(const SIZE *)(uintptr_t)(SRC + instr.offset);   \
           CONT;
 
       MEM(BYTE, uint8_t)
@@ -454,7 +457,7 @@ JUMP_ALWAYS:
     COND_JMP(i, SLE, <=)
 OPCODE_CALL:
     {
-        bpf_call_t call = _bpf_get_call(instr->immediate);
+        bpf_call_t call = _bpf_get_call(instr.immediate);
         if (call) {
             regmap[0] = (*(call))(bpf,
                                   regmap[1],
