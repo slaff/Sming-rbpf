@@ -20,7 +20,6 @@ RBPF_INCFILE	:= $(RBPF_INCDIR)/rbpf/containers.h
 # Source file with actual blob imports
 RBPF_SRCFILE	:= $(RBPF_OUTDIR)/containers.cpp
 
-LLC ?= llc
 CLANG ?= clang
 
 all: blobs
@@ -29,13 +28,10 @@ all: blobs
 # $1 -> Source file
 # $2 -> Blob file
 define GenerateTarget
-TARGET_BC := $(2:.bin=.bc) # Clang bytecode
-TARGET_OBJ := $(2:.bin=.obj) # llvm BPF object code
-$$(TARGET_BC): $1
+TARGET_OBJ := $(2:.bin=.obj)
+$$(TARGET_OBJ): $1
 	$(Q) mkdir -p $$(@D)
-	$(Q) $$(CLANG) -Wall -Wextra -Werror -g3 -Os -emit-llvm -c $$< -o $$@
-$$(TARGET_OBJ): $$(TARGET_BC)
-	$(Q) $$(LLC) -march=bpf -mcpu=v2 -filetype=obj -o $$@ $$<
+	$(Q) $$(CLANG) -Wall -Wextra -g3 -Os -target bpf -c $$< -o $$@
 $2: $$(TARGET_OBJ)
 	$$(RBPF_GENRBF) generate $$< $$@
 endef
@@ -70,12 +66,12 @@ $(RBPF_INCFILE): $(call BlobFile,$(RBPF_SOURCES))
 # Generate code for BLOB source file
 # $1 -> source file
 define GenerateSource
-@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, \"$(call BlobFile,$1)\")\n" >> $@
+@printf "IMPORT_FSTR_ARRAY($(call GetSymbolName,$1), uint8_t, $(patsubst $(PROJECT_DIR)/%,PROJECT_DIR \"/%\",$(call BlobFile,$1)))\n" >> $@
 
 endef
 
 $(RBPF_SRCFILE): $(call BlobFile,$(RBPF_SOURCES))
-	@echo "#include <FlashString/Array.hpp>" >> $@
+	@echo "#include <FlashString/Array.hpp>" > $@
 	@echo "" >> $@
 	@echo "namespace rBPF {" >> $@
 	@echo "namespace Container {" >> $@

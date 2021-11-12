@@ -22,25 +22,23 @@ See :doc:`about` for further details.
 Toolchain setup
 ---------------
 
-The following applications and libraries are required:
+The following applications are required:
 
-- LLVM
-- Clang
+- Clang/LLVM compiler suite
 - `pyelftools <https://github.com/eliben/pyelftools>`_
 
-Install for Ubuntu as follows::
+From a sample or project directory, install as follows.
 
-   sudo apt-get install llvm clang
-   cd path/to/this/folder
+Ubuntu::
+
+   sudo apt-get install clang
    make python-requirements
 
-Please ensure that llvm supports generating eBPF code by executing::
+Windows::
 
-	llc --version
-
-This must show "bpf" in the list of registered targets.
-
-Note: GCC support for BPF is currently work in progress.
+   winget install llvm
+   set CLANG="c:\Program Files\LLVM\bin\clang"
+   make python-requirements
 
 
 Sming interface
@@ -59,7 +57,7 @@ You should always use a structured type for this as shown in the samples.
 Low-level details
 -----------------
 
-Clang and LLVM are used to compile container source code to an eBPF object file.
+Clang is used to compile container source code to an eBPF object file.
 This is then converted to a Femto-Container-specific format using python.
 
 For example, the ``increment.c`` container is compiled to ``increment.o`` then converted to ``increment.bin``.
