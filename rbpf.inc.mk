@@ -38,7 +38,8 @@ $$(TARGET_OBJ): $1
 	$(Q) mkdir -p $$(@D)
 	$(Q) $$(CLANG) -Wall -Wextra -g3 -Os $$(INC_FLAGS) -target bpf -c $$< -o $$@
 $2: $$(TARGET_OBJ)
-	$$(RBPF_GENRBF) generate $$< $$@
+	$(Q) $$(RBPF_GENRBF) generate $$< $$@.tmp
+	$(Q) mv -f $$@.tmp $$@
 endef
 $(foreach f,$(RBPF_SOURCES),$(eval $(call GenerateTarget,$f,$(call BlobFile,$f))))
 
