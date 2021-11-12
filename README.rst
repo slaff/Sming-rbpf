@@ -53,6 +53,9 @@ Compiled containers are located in the :cpp:namespace:`rBPF::Container` namespac
 Note that parameters are passed to container functions as a pointer.
 You should always use a structured type for this as shown in the samples.
 
+The compiler will use the first public function in each source file as the entry point.
+It is recommended that all other functions be declared ``static`` or placed within an anonymous namespace.
+
 
 Low-level details
 -----------------
@@ -116,6 +119,14 @@ Build variables
 	Location of Femto-Container applications.
 	Place all .c and .cpp source modules here.
 
+
+.. envvar:: BPF_STORE_NUM_VALUES
+
+	default: 16
+
+	Maximum number of stored values.
+
+	Space is shared between all stores (global and local).
 
 
 API Documentation
