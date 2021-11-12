@@ -6,6 +6,7 @@ endif
 
 RBPF_OBJDIR := $(RBPF_OUTDIR)/obj
 RBPF_INCDIR := $(RBPF_OUTDIR)/include
+RBPF_COMPONENT_DIR := $(call dirx,$(firstword $(MAKEFILE_LIST)))
 
 # Obtain blob file path
 # $1 -> source file(s)
@@ -27,7 +28,8 @@ all: blobs
 INC_FLAGS = \
 	-nostdinc \
 	-isystem `$(CLANG) -print-file-name=include` \
-	-I$(dir $(firstword $(MAKEFILE_LIST)))bpf/include
+	-I$(RBPF_COMPONENT_DIR)/bpf/include \
+	-I$(RBPF_COMPONENT_DIR)/src/include/bpf
 
 # Generate build targets
 # $1 -> Source file
