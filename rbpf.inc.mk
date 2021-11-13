@@ -35,6 +35,7 @@ INC_FLAGS = \
 define GenerateTarget
 TARGET_OBJ := $(2:.bin=.obj)
 $$(TARGET_OBJ): $1
+	@echo "rBPF: CC $$<"
 	$(Q) mkdir -p $$(@D)
 	$(Q) $$(CLANG) -Wall -Wextra -g3 -Os $$(INC_FLAGS) -target bpf -c $$< -o $$@
 $2: $$(TARGET_OBJ)
@@ -58,6 +59,7 @@ define GenerateHeader
 endef
 
 $(RBPF_INCFILE): $(call BlobFile,$(RBPF_SOURCES))
+	@echo "rBPF: Create $(patsubst $(PROJECT_DIR)/%,%,$@)"
 	@mkdir -p $(@D)
 	@echo "#pragma once" > $@
 	@echo "#include <FlashString/Array.hpp>" >> $@
@@ -77,6 +79,7 @@ define GenerateSource
 endef
 
 $(RBPF_SRCFILE): $(call BlobFile,$(RBPF_SOURCES))
+	@echo "rBPF: Create $(patsubst $(PROJECT_DIR)/%,%,$@)"
 	@echo "#include <FlashString/Array.hpp>" > $@
 	@echo "" >> $@
 	@echo "namespace rBPF {" >> $@
