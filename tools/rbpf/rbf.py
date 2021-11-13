@@ -175,39 +175,46 @@ class RBF(object):
 
 
     @staticmethod
-    def _get_section_lddw_opcode(section):
-        if section == RODATA:
-            return instructions.LDDWR_OPCODE
-        if section == DATA or section == BSS:
-            return instructions.LDDWD_OPCODE
-        raise RuntimeError(f'Invalid section found {section}')
-
-    @staticmethod
-    def _patch_text(text, elffile, relocation, data_len, bss_len):
+    def _patch_text(text, elffile, relocation, data_len, bss_len, rodata):
+        rodata_len = len(rodata)
         entry = relocation.entry
         location = entry.r_offset
         symbols = elffile.get_section_by_name(SYMBOLS)
         symbol = symbols.get_symbol(entry.r_info_sym)
+
         if symbol.entry.st_info.type == 'STT_SECTION':
             # refers to an offset in a section
-            section_name = elffile.get_section(symbol.entry.st_shndx).name
-            if section_name == RODATA:
-                offset = 0 #data_len + bss_len
-            elif section_name == DATA:
-                offset = 0
-            elif section_name == BSS:
-                offset = data_len
-            else:
-                raise RuntimeError(f"Bad section {section_name}")
+            section = elffile.get_section(symbol.entry.st_shndx)
+            offset = 0
         elif symbol.entry.st_info.type == 'STT_OBJECT':
-            section_name = elffile.get_section(symbol.entry.st_shndx).name
+            section = elffile.get_section(symbol.entry.st_shndx)
             offset = symbol.entry.st_value
-        opcode = RBF._get_section_lddw_opcode(section_name)
+
+        if section.name == RODATA:
+            offset += 0
+            opcode = instructions.LDDWR_OPCODE
+            opcode_name = 'LDDWR'
+        elif section.name.startswith(RODATA):
+            logging.info(f"Tacking {section.name} onto RODATA")
+            offset += rodata_len
+            rodata += bytearray(section.data())
+            opcode = instructions.LDDWR_OPCODE
+            opcode_name = 'LDDWR'
+        elif section.name == DATA:
+            offset += 0
+            opcode = instructions.LDDWD_OPCODE
+        elif section.name == BSS:
+            offset += data_len
+            opcode = instructions.LDDWD_OPCODE
+        else:
+            raise RuntimeError(f"Bad section {section_name}")
+
         if text[location] != instructions.LDDW_OPCODE:
             logging.error(f"No LDDW instruction at {hex(location)}")
         else:
             instruction = instructions.LDDW._make(instructions.LDDW_STRUCT.unpack_from(text, location))
-            logging.info(f"Replacing {instruction} at {location} with {opcode} at {offset} in section {section_name}")
+            opcode_name = 'LDDWD' if opcode == instructions.LDDWD_OPCODE else 'LDDWR'
+            logging.info(f"Replacing {instruction} at {location} with {opcode_name} at {offset} in section {section.name}")
             text[location:location+16] = instructions.LDDW_STRUCT.pack(
                 opcode,
                 instruction.registers,
@@ -278,6 +285,6 @@ class RBF(object):
                     section = elffile.get_section(symbol.entry.st_shndx)
                     logging.info(f"relocation at instruction {hex(entry['r_offset'])} for symbol {name} in {section.name} at {symbol.entry.st_value}")
 
-                RBF._patch_text(text, elffile, relocation, len(data), bss_len)
+                RBF._patch_text(text, elffile, relocation, len(data), bss_len, rodata)
 
         return RBF(data=data, bss_len=bss_len, rodata=rodata, text=text, symbols=symbol_structs)

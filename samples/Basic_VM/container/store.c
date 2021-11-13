@@ -5,10 +5,8 @@ static uint32_t lastValue2 = 3; // Allocate in DATA
 
 int64_t store()
 {
-	static const char str1[] = ">> Now in VM running store() <<\r\n";
-	bpf_printf(str1);
-	static const char str1a[] = "lastValue (%u, %u)\r\n";
-	bpf_printf(str1a, lastValue1, lastValue2);
+	bpf_printf(">> Now in VM running store() <<\r\n");
+	bpf_printf("lastValue (%u, %u)\r\n", lastValue1, lastValue2);
 
 	uint32_t value1 = 0;
 	bpf_fetch_global(1, &value1);
@@ -23,8 +21,7 @@ int64_t store()
 
 	uint64_t res = ((uint64_t)value1 << 32) | value2;
 
-	static const char str2[] = ">> Now leaving store() <<\r\n";
-	bpf_printf(str2);
+	bpf_printf(">> Now leaving store() <<\r\n");
 
 	return res;
 }
