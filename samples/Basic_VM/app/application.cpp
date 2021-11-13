@@ -63,7 +63,7 @@ void test_multiply()
 void test_store()
 {
 	Serial.println(F("Calling 'store()' in VM"));
-	rBPF::VirtualMachine vm(rBPF::Container::store);
+	rBPF::VirtualMachine vm(rBPF::Container::store, 32);
 	vm.globals[1] = 1234;
 	vm.locals[2] = 5678;
 	for(unsigned i = 0; i < 3; ++i) {

@@ -60,6 +60,10 @@ int bpf_execute_ctx(bpf_t *bpf, void *ctx, size_t ctx_len, int64_t *result)
 
 int bpf_setup(bpf_t *bpf)
 {
+    if(bpf == NULL) {
+        return -1;
+    }
+
     bpf->stack_region.start = bpf->stack_region.phys_start = bpf->stack;
     bpf->stack_region.len = bpf->stack_size;
     bpf->stack_region.flag = (BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE);

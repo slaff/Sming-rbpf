@@ -50,7 +50,7 @@ VirtualMachine::~VirtualMachine()
 	unload();
 }
 
-bool VirtualMachine::load(const Container& container)
+bool VirtualMachine::load(const Container& container, size_t stackSize)
 {
 	check_init();
 
@@ -58,14 +58,27 @@ bool VirtualMachine::load(const Container& container)
 
 	this->container = &container;
 
+	if(stackSize != this->stackSize) {
+		stack.reset(new uint8_t[stackSize]);
+		if(!stack) {
+			debug_e("[VM] No memory for stack");
+			return false;
+		}
+		this->stackSize = stackSize;
+	}
+
 	inst.reset(new struct bpf_s({
 		.application = container.data(),
 		.application_len = container.length(),
-		.stack = stack,
-		.stack_size = sizeof(stack),
+		.stack = stack.get(),
+		.stack_size = stackSize,
 	}));
+	if(bpf_setup(inst.get()) < 0) {
+		debug_e("[VM] Init failed");
+		inst.reset();
+		return false;
+	}
 
-	bpf_setup(inst.get());
 	return true;
 }
 

@@ -18,6 +18,7 @@ class VirtualMachine
 {
 public:
 	using Container = FSTR::Array<uint8_t>;
+	static constexpr size_t defaultStackSize{512};
 
 	/**
 	 * @brief Create an uninitialised VM
@@ -28,9 +29,9 @@ public:
      * @name Create a VM and load a container
      * @param container Container code blob
      */
-	VirtualMachine(const Container& container) : VirtualMachine()
+	VirtualMachine(const Container& container, size_t stackSize = defaultStackSize) : VirtualMachine()
 	{
-		load(container);
+		load(container, stackSize);
 	}
 
 	~VirtualMachine();
@@ -39,7 +40,7 @@ public:
 	 * @brief Load container and initialise it
 	 * @retval bool true on success
 	 */
-	bool load(const Container& container);
+	bool load(const Container& container, size_t stackSize = defaultStackSize);
 
 	/**
 	 * @brief Unload container and free any allocated resources
@@ -82,7 +83,8 @@ private:
 
 	const Container* container{nullptr};
 	std::unique_ptr<struct bpf_s> inst;
-	uint8_t stack[512]{};
+	std::unique_ptr<uint8_t> stack;
+	size_t stackSize{0};
 	int lastError{0};
 };
 
