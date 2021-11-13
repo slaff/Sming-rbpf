@@ -70,7 +70,7 @@ The Femto-Container application binary can be inspected as follows:
 
 .. code-block:: bash
 
-	make blobs-dump
+	make rbpf-dump
 
 Output from the sample ``increment`` container looks like this::
 
