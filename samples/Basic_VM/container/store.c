@@ -1,7 +1,7 @@
 #include <bpf/bpfapi/helpers.h>
 
-static uint32_t lastValue1 = 1;
-static uint32_t lastValue2 = 1;
+static uint32_t lastValue1;		// Allocated in BSS
+static uint32_t lastValue2 = 3; // Allocate in DATA
 
 int64_t store()
 {

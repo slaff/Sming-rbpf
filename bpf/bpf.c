@@ -67,16 +67,17 @@ int bpf_setup(bpf_t *bpf)
 
     rbpf_header_t hdr = rbpf_header(bpf);
 
-    size_t len = ALIGNUP4(hdr.data_len);
+    size_t len = ALIGNUP4(hdr.data_len + hdr.bss_len);
     if(len == 0) {
         bpf->data_region.start = bpf->data_region.phys_start = NULL;
     } else {
         bpf->data_region.start = rbpf_data(bpf);
-        void* ptr = malloc(len);
+        uint8_t* ptr = malloc(len);
         if(ptr == NULL) {
             return -1;
         }
-        memcpy(ptr, bpf->data_region.start, len);
+        memcpy(ptr, bpf->data_region.start, ALIGNUP4(hdr.data_len));
+        memset(ptr + hdr.data_len, 0, hdr.bss_len);
         bpf->data_region.phys_start = ptr;
     }
     bpf->data_region.len = len;

@@ -50,6 +50,7 @@ typedef struct __attribute__((packed)) {
     uint32_t version;    /**< Version of the application */
     uint32_t flags;
     uint32_t data_len;   /**< Length of the data section */
+    uint32_t bss_len;    /**< Length of the BSS section */
     uint32_t rodata_len; /**< Length of the rodata section */
     uint32_t text_len;   /**< Length of the text section */
     uint32_t functions;  /**< Number of functions available */
