@@ -108,14 +108,16 @@ struct bpf_mem_region {
 #define BPF_CONFIG_NO_RETURN       0x0100 /**< Script doesn't need to have a return */
 
 typedef struct bpf_s {
-    bpf_mem_region_t stack_region;
-    bpf_mem_region_t rodata_region;
-    bpf_mem_region_t data_region;
-    bpf_mem_region_t arg_region;
+    // Initialised by application
     const uint8_t *application; /**< Application bytecode */
     size_t application_len;     /**< Application length */
     uint8_t *stack;             /**< VM stack, must be a multiple of 8 bytes and aligned */
     size_t stack_size;          /**< VM stack size in bytes */
+    // Initialised by bpf_setup()
+    bpf_mem_region_t stack_region;
+    bpf_mem_region_t rodata_region;
+    bpf_mem_region_t data_region;
+    bpf_mem_region_t arg_region;
     btree_t btree;              /**< Local btree */
     uint16_t flags;
     uint32_t branches_remaining; /**< Number of allowed branch instructions remaining */
