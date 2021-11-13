@@ -175,8 +175,9 @@ class RBF(object):
     def _get_section_lddw_opcode(section):
         if section == RODATA:
             return instructions.LDDWR_OPCODE
-        elif section == DATA:
+        if section == DATA:
             return instructions.LDDWD_OPCODE
+        raise RuntimeError(f'Invalid section found {section}')
 
     @staticmethod
     def _patch_text(text, elffile, relocation):
@@ -196,7 +197,7 @@ class RBF(object):
             logging.error(f"No LDDW instruction at {hex(location)}")
         else:
             instruction = instructions.LDDW._make(instructions.LDDW_STRUCT.unpack_from(text, location))
-            logging.info(f"Replacing {instruction} at {location} with {opcode} at {offset}")
+            logging.info(f"Replacing {instruction} at {location} with {opcode} at {offset} in section {section_name}")
             text[location:location+16] = instructions.LDDW_STRUCT.pack(
                 opcode,
                 instruction.registers,
