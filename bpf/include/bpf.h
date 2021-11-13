@@ -97,6 +97,7 @@ typedef struct bpf_mem_region bpf_mem_region_t;
 struct bpf_mem_region {
     bpf_mem_region_t *next;
     const uint8_t *start;
+    const uint8_t *phys_start;
     size_t len;
     uint8_t flag;
 };
@@ -129,7 +130,8 @@ struct bpf_hook {
 };
 
 void bpf_init(void);
-void bpf_setup(bpf_t *bpf);
+int bpf_setup(bpf_t *bpf);
+void bpf_destroy(bpf_t *bpf);
 
 int bpf_verify_preflight(bpf_t *bpf);
 

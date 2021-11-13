@@ -35,7 +35,16 @@ public:
 
 	~VirtualMachine();
 
+	/**
+	 * @brief Load container and initialise it
+	 * @retval bool true on success
+	 */
 	bool load(const Container& container);
+
+	/**
+	 * @brief Unload container and free any allocated resources
+	 */
+	void unload();
 
 	/**
      * @name Run the container

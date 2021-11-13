@@ -12,6 +12,7 @@
 #include "assert.h"
 #include "bpf.h"
 #include "bpf/store.h"
+#include <FakePgmSpace.h>
 
 extern int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result);
 
@@ -50,35 +51,59 @@ int bpf_execute(bpf_t *bpf, void *ctx, size_t ctx_len, int64_t *result)
 
 int bpf_execute_ctx(bpf_t *bpf, void *ctx, size_t ctx_len, int64_t *result)
 {
-    bpf->arg_region.start = ctx;
+    bpf->arg_region.start = bpf->arg_region.phys_start = ctx;
     bpf->arg_region.len = ctx_len;
     bpf->arg_region.flag = (BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE);
 
     return _execute(bpf, ctx, result);
 }
 
-void bpf_setup(bpf_t *bpf)
+int bpf_setup(bpf_t *bpf)
 {
-    bpf->stack_region.start = bpf->stack;
+    bpf->stack_region.start = bpf->stack_region.phys_start = bpf->stack;
     bpf->stack_region.len = bpf->stack_size;
     bpf->stack_region.flag = (BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE);
     bpf->stack_region.next = &bpf->data_region;
 
-    bpf->data_region.start = rbpf_data(bpf);
-    bpf->data_region.len = rbpf_header(bpf).data_len;
+    rbpf_header_t hdr = rbpf_header(bpf);
+
+    size_t len = ALIGNUP4(hdr.data_len);
+    if(len == 0) {
+        bpf->data_region.start = bpf->data_region.phys_start = NULL;
+    } else {
+        bpf->data_region.start = rbpf_data(bpf);
+        void* ptr = malloc(len);
+        if(ptr == NULL) {
+            return -1;
+        }
+        memcpy(ptr, bpf->data_region.start, len);
+        bpf->data_region.phys_start = ptr;
+    }
+    bpf->data_region.len = len;
     bpf->data_region.flag = (BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE);
     bpf->data_region.next = &bpf->rodata_region;
 
-    bpf->rodata_region.start = rbpf_rodata(bpf);
-    bpf->rodata_region.len = rbpf_header(bpf).rodata_len;
+    bpf->rodata_region.start = bpf->rodata_region.phys_start = rbpf_rodata(bpf);
+    bpf->rodata_region.len = hdr.rodata_len;
     bpf->rodata_region.flag = BPF_MEM_REGION_READ;
     bpf->rodata_region.next = &bpf->arg_region;
 
     bpf->arg_region.next = NULL;
-    bpf->arg_region.start = NULL;
+    bpf->arg_region.start = bpf->arg_region.phys_start = NULL;
     bpf->arg_region.len = 0;
 
     bpf->flags |= BPF_FLAG_SETUP_DONE;
+
+    return 0;
+}
+
+void bpf_destroy(bpf_t* bpf)
+{
+    if(bpf == NULL) {
+        return;
+    }
+    free((void*)bpf->data_region.phys_start);
+    memset(bpf, 0, sizeof(bpf_t));
 }
 
 void bpf_add_region(bpf_t *bpf, bpf_mem_region_t *region,

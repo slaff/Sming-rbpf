@@ -47,11 +47,14 @@ VirtualMachine::VirtualMachine() : locals(*this)
 
 VirtualMachine::~VirtualMachine()
 {
+	unload();
 }
 
 bool VirtualMachine::load(const Container& container)
 {
 	check_init();
+
+	unload();
 
 	this->container = &container;
 
@@ -64,6 +67,15 @@ bool VirtualMachine::load(const Container& container)
 
 	bpf_setup(inst.get());
 	return true;
+}
+
+void VirtualMachine::unload()
+{
+	if(inst) {
+		bpf_destroy(inst.get());
+		inst.reset();
+	}
+	lastError = 0;
 }
 
 int64_t VirtualMachine::execute(void* ctx, size_t ctxLength)

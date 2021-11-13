@@ -20,7 +20,7 @@
 typedef int dont_be_pedantic;
 static bpf_call_t _bpf_get_call(uint32_t num);
 
-static int _check_mem(const bpf_t *bpf, uint8_t size, const intptr_t addr, uint8_t type)
+static void* _get_mem(const bpf_t *bpf, uint8_t size, const intptr_t addr, uint8_t type)
 {
     const intptr_t end = addr + size;
     for (const bpf_mem_region_t *region = &bpf->stack_region; region; region = region->next) {
@@ -28,32 +28,22 @@ static int _check_mem(const bpf_t *bpf, uint8_t size, const intptr_t addr, uint8
                 (end <= (intptr_t)(region->start + region->len)) &&
                 (region->flag & type)) {
 
-            return 0;
+            return (void*)(region->phys_start + addr - region->start);
         }
     }
 
-    debug_d("Denied access to %p with len %u\n",(void*)addr, end - addr);
-    return -1;
-}
-
-static inline int _check_load(const bpf_t *bpf, uint8_t size, const intptr_t addr)
-{
-    return _check_mem(bpf, size, addr, BPF_MEM_REGION_READ);
-}
-
-static inline int _check_store(const bpf_t *bpf, uint8_t size, const intptr_t addr)
-{
-    return _check_mem(bpf, size, addr, BPF_MEM_REGION_WRITE);
+    debug_d("Denied access to %p with len %u\n",(void*)addr, size);
+    return NULL;
 }
 
 int bpf_store_allowed(const bpf_t *bpf, void *addr, size_t size)
 {
-    return _check_store(bpf, size, (intptr_t)addr);
+    return _get_mem(bpf, size, (intptr_t)addr, BPF_MEM_REGION_WRITE) != NULL;
 }
 
 int bpf_load_allowed(const bpf_t *bpf, void *addr, size_t size)
 {
-    return _check_load(bpf, size, (intptr_t)addr);
+    return _get_mem(bpf, size, (intptr_t)addr, BPF_MEM_REGION_READ) != NULL;
 }
 
 static bpf_call_t _bpf_get_call(uint32_t num)
@@ -212,6 +202,7 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
     const volatile bpf_instruction_t *pc = (const volatile bpf_instruction_t*)rbpf_text(bpf);
     bpf_instruction_t instr;
     bool jump_cond = false;
+    void* memptr;
 
     res = bpf_verify_preflight(bpf);
     if (res < 0) {
@@ -416,22 +407,25 @@ MEM_LDDWR_IMM:
 
 #define MEM(SIZEOP, SIZE)                     \
       MEM_STX_##SIZEOP:                       \
-          if (_check_store(bpf, sizeof(SIZE), DST + instr.offset) < 0) { \
+          memptr = _get_mem(bpf, sizeof(SIZE), DST + instr.offset, BPF_MEM_REGION_WRITE); \
+          if (memptr == NULL) { \
               goto mem_error; \
           } \
-          *(SIZE *)(uintptr_t)(DST + instr.offset) = SRC;   \
+          *(SIZE*)memptr = SRC; \
           CONT;                               \
       MEM_ST_##SIZEOP:                        \
-          if (_check_store(bpf, sizeof(SIZE), DST + instr.offset) < 0) { \
+          memptr = _get_mem(bpf, sizeof(SIZE), DST + instr.offset, BPF_MEM_REGION_WRITE); \
+          if (memptr == NULL) { \
               goto mem_error; \
           } \
-          *(SIZE *)(uintptr_t)(DST + instr.offset) = IMM;   \
+          *(SIZE*)memptr = IMM; \
           CONT;                               \
       MEM_LDX_##SIZEOP:                       \
-          if (_check_load(bpf, sizeof(SIZE), SRC + instr.offset) < 0) { \
+          memptr = _get_mem(bpf, sizeof(SIZE), SRC + instr.offset, BPF_MEM_REGION_READ); \
+          if (memptr == NULL) { \
               goto mem_error; \
           } \
-          DST = *(const SIZE *)(uintptr_t)(SRC + instr.offset);   \
+          DST = *(const SIZE*)memptr; \
           CONT;
 
       MEM(BYTE, uint8_t)
