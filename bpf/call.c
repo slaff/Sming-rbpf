@@ -10,8 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include <FakePgmSpace.h>
 
 #include "bpf.h"
 #include "bpf/instruction.h"
@@ -34,7 +33,15 @@
 uint32_t bpf_vm_printf(bpf_t *bpf, uint32_t fmt, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
 {
     (void)bpf;
-    return printf((char*)(uintptr_t)fmt, a2, a3, a4, a5);
+    const char* fmt_ptr = (const char*)fmt;
+    if(isFlashPtr(fmt_ptr)) {
+        size_t len = ALIGNUP4(strlen_P(fmt_ptr) + 1);
+        char buf[len];
+        memcpy(buf, fmt_ptr, len);
+        return m_printf(buf, a2, a3, a4, a5);
+    }
+
+    return m_printf(fmt_ptr, a2, a3, a4, a5);
 }
 
 uint32_t bpf_vm_store_local(bpf_t *bpf, uint32_t key, uint32_t value, uint32_t a3, uint32_t a4, uint32_t a5)
