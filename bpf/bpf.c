@@ -12,11 +12,38 @@
 #include "assert.h"
 #include "bpf.h"
 #include "bpf/store.h"
-#include <FakePgmSpace.h>
+#include <debug_progmem.h>
 
 extern int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result);
 
 static bpf_hook_t *_hooks[BPF_HOOK_NUM] = { 0 };
+
+void* bpf_get_mem(const bpf_t *bpf, uint8_t size, const intptr_t addr, uint8_t type)
+{
+    const intptr_t end = addr + size;
+    for (const bpf_mem_region_t *region = &bpf->stack_region; region; region = region->next) {
+        if (addr >= (intptr_t)region->start && end <= (intptr_t)(region->start + region->len)) {
+            if ((region->flag & type) == 0) {
+                debug_d("Denied access to 0x%x with len %u\n", (void*)addr, size);
+                return NULL;
+            }
+            return (void*)(region->phys_start + addr - region->start);
+        }
+    }
+
+    debug_d("Attempt to access invalid memory at 0x%x with len %u\n", (void*)addr, size);
+    return NULL;
+}
+
+int bpf_store_allowed(const bpf_t *bpf, void *addr, size_t size)
+{
+    return bpf_get_mem(bpf, size, (intptr_t)addr, BPF_MEM_REGION_WRITE) ? 0 : -1;
+}
+
+int bpf_load_allowed(const bpf_t *bpf, void *addr, size_t size)
+{
+    return bpf_get_mem(bpf, size, (intptr_t)addr, BPF_MEM_REGION_READ) ? 0 : -1;
+}
 
 static bool _continue(bpf_hook_t *hook, int64_t *res)
 {
