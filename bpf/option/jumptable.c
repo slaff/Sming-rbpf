@@ -17,9 +17,6 @@
 
 #include <debug_progmem.h>
 
-typedef int dont_be_pedantic;
-static bpf_call_t _bpf_get_call(uint32_t num);
-
 static void* _get_mem(const bpf_t *bpf, uint8_t size, const intptr_t addr, uint8_t type)
 {
     const intptr_t end = addr + size;
@@ -44,60 +41,6 @@ int bpf_store_allowed(const bpf_t *bpf, void *addr, size_t size)
 int bpf_load_allowed(const bpf_t *bpf, void *addr, size_t size)
 {
     return _get_mem(bpf, size, (intptr_t)addr, BPF_MEM_REGION_READ) != NULL;
-}
-
-static bpf_call_t _bpf_get_call(uint32_t num)
-{
-    switch(num) {
-        case BPF_FUNC_BPF_PRINTF:
-            return &bpf_vm_printf;
-        case BPF_FUNC_BPF_MEMCPY:
-            return &bpf_vm_memcpy;
-        case BPF_FUNC_BPF_STORE_LOCAL:
-            return &bpf_vm_store_local;
-        case BPF_FUNC_BPF_STORE_GLOBAL:
-            return &bpf_vm_store_global;
-        case BPF_FUNC_BPF_FETCH_LOCAL:
-            return &bpf_vm_fetch_local;
-        case BPF_FUNC_BPF_FETCH_GLOBAL:
-            return &bpf_vm_fetch_global;
-#ifdef MODULE_XTIMER
-        case BPF_FUNC_BPF_NOW_MS:
-            return &bpf_vm_now_ms;
-#endif
-#ifdef MODULE_SAUL_REG
-        case BPF_FUNC_BPF_SAUL_REG_FIND_NTH:
-            return &bpf_vm_saul_reg_find_nth;
-        case BPF_FUNC_BPF_SAUL_REG_FIND_TYPE:
-            return &bpf_vm_saul_reg_find_type;
-        case BPF_FUNC_BPF_SAUL_REG_READ:
-            return &bpf_vm_saul_reg_read;
-#endif
-#ifdef MODULE_GCOAP
-        case BPF_FUNC_BPF_GCOAP_RESP_INIT:
-            return &bpf_vm_gcoap_resp_init;
-        case BPF_FUNC_BPF_COAP_OPT_FINISH:
-            return &bpf_vm_coap_opt_finish;
-        case BPF_FUNC_BPF_COAP_ADD_FORMAT:
-            return &bpf_vm_coap_add_format;
-        case BPF_FUNC_BPF_COAP_GET_PDU:
-            return &bpf_vm_coap_get_pdu;
-#endif
-#ifdef MODULE_FMT
-        case BPF_FUNC_BPF_FMT_S16_DFP:
-            return &bpf_vm_fmt_s16_dfp;
-        case BPF_FUNC_BPF_FMT_U32_DEC:
-            return &bpf_vm_fmt_u32_dec;
-#endif
-#ifdef MODULE_ZTIMER
-        case BPF_FUNC_BPF_ZTIMER_NOW:
-            return &bpf_vm_ztimer_now;
-        case BPF_FUNC_BPF_ZTIMER_PERIODIC_WAKEUP:
-            return &bpf_vm_ztimer_periodic_wakeup;
-#endif
-        default:
-            return NULL;
-    }
 }
 
 /**
@@ -451,7 +394,7 @@ JUMP_ALWAYS:
     COND_JMP(i, SLE, <=)
 OPCODE_CALL:
     {
-        bpf_call_t call = _bpf_get_call(instr.immediate);
+        bpf_call_t call = bpf_get_call(instr.immediate);
         if (call) {
             regmap[0] = (*(call))(bpf,
                                   regmap[1],
