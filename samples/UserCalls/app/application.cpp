@@ -13,6 +13,10 @@ void test_appcall()
 
 } // namespace
 
+/*
+	46818213 no jumptable
+	46816113 jumptable
+*/
 void init()
 {
 	Serial.begin(SERIAL_BAUD_RATE);
@@ -20,5 +24,10 @@ void init()
 
 	Serial.println(_F("All up, running the Femto-Container application now"));
 
+	CpuCycleTimer timer;
 	test_appcall();
+	auto elapsed = timer.elapsedTime();
+	Serial.print(_F("Call took "));
+	Serial.print(elapsed);
+	Serial.println(_F(" cycles"));
 }
