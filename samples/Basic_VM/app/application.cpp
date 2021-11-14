@@ -91,7 +91,7 @@ void init()
 	Serial.begin(SERIAL_BAUD_RATE);
 	Serial.systemDebugOutput(true); // Allow debug print to serial
 
-	Serial.println("All up, running the Femto-Container application now");
+	Serial.println(_F("All up, running the Femto-Container application now"));
 
 	test_increment();
 	test_multiply();
