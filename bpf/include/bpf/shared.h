@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <bpf_appcalls.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,10 +32,6 @@ extern "C" {
 
 /* Time(r) functions */
 #define BPF_SYSCALL_TIMER(XX) XX(0x20, bpf_now_ms, uint32_t)
-
-#ifndef BPF_SYSCALL_APP
-#define BPF_SYSCALL_APP(XX)
-#endif
 
 #define BPF_SYSCALL_MAP(XX)                                                                                            \
 	BPF_SYSCALL_STD(XX)                                                                                                \

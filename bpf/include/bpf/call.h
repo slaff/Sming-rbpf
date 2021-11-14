@@ -18,6 +18,15 @@ namespace rBPF
 {
 namespace VM
 {
+/**
+ * @brief All calls are declared using a macro with the following form:
+ *   XX(function_code, function_name, return_type, ...)
+ *      function_code   32-bit system call code
+ *      function_name   Name used to invoke function within VM
+ *      return_type     Function return type (void, int, etc)
+ *      ...             Parameter types and names
+ *
+ */
 #define XX(function_code, function_name, return_type, ...) return_type function_name(bpf_t*, ##__VA_ARGS__);
 BPF_SYSCALL_MAP(XX)
 #undef XX
