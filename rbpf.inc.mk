@@ -28,6 +28,7 @@ all: blobs
 INC_FLAGS = \
 	-nostdinc \
 	-isystem `$(CLANG) -print-file-name=include` \
+	-Iinclude \
 	-I$(RBPF_COMPONENT_DIR)/bpf/include \
 	-I$(RBPF_COMPONENT_DIR)/src/include/bpf
 
