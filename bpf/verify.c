@@ -15,30 +15,6 @@
 #include "bpf/instruction.h"
 #include "bpf/call.h"
 
-static bool _bpf_check_call(uint32_t num)
-{
-    switch(num) {
-        /* These calls are expected to be supported */
-        case BPF_FUNC_BPF_PRINTF:
-        case BPF_FUNC_BPF_STORE_LOCAL:
-        case BPF_FUNC_BPF_STORE_GLOBAL:
-        case BPF_FUNC_BPF_FETCH_LOCAL:
-        case BPF_FUNC_BPF_FETCH_GLOBAL:
-        case BPF_FUNC_BPF_NOW_MS:
-        case BPF_FUNC_BPF_SAUL_REG_FIND_NTH:
-        case BPF_FUNC_BPF_SAUL_REG_FIND_TYPE:
-        case BPF_FUNC_BPF_SAUL_REG_READ:
-#ifdef MODULE_GCOAP
-        case BPF_FUNC_BPF_GCOAP_RESP_INIT:
-        case BPF_FUNC_BPF_COAP_OPT_FINISH:
-#endif
-            return true;
-        default:
-            return false;
-    }
-}
-
-
 int bpf_verify_preflight(bpf_t *bpf)
 {
     const bpf_instruction_t *application = rbpf_text(bpf);
@@ -78,7 +54,7 @@ int bpf_verify_preflight(bpf_t *bpf)
         }
 
         if (inst.opcode == (BPF_INSTRUCTION_BRANCH_CALL | BPF_INSTRUCTION_CLS_BRANCH)) {
-            if (!_bpf_check_call(inst.immediate)) {
+            if (!bpf_get_call(inst.immediate)) {
                 return BPF_ILLEGAL_CALL;
             }
         }

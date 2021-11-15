@@ -16,6 +16,8 @@ COMPONENT_SRCDIRS := \
 	src \
 	bpf
 
+COMPONENT_APPCODE := src/appcode
+
 ifeq ($(BPF_USE_JUMPTABLE),1)
   COMPONENT_SRCFILES += bpf/option/jumptable.c
 else
@@ -31,7 +33,7 @@ export RBPF_GENRBF := $(PYTHON) $(COMPONENT_PATH)/tools/gen_rbf.py $(if $(V),--v
 
 export RBPF_OUTDIR	:= $(PROJECT_DIR)/out/rbpf
 COMPONENT_INCDIRS	+= $(RBPF_OUTDIR)/include
-COMPONENT_APPCODE	:= $(RBPF_OUTDIR)
+COMPONENT_APPCODE	+= $(RBPF_OUTDIR)
 
 RBPF_MAKE = $(MAKE) -C $(RBPF_CONTAINER_PATH) --no-print-directory -f $(RBPF_COMPONENT_PATH)/rbpf.inc.mk
 

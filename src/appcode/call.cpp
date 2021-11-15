@@ -7,22 +7,19 @@
  * directory for more details.
  */
 
-#ifndef BPF_BPFAPI_HELPERS_H
-#define BPF_BPFAPI_HELPERS_H
+#include <debug_progmem.h>
+#include <bpf.h>
+#include "bpf/store.h"
+#include "bpf/call.h"
 
-#include "bpf/shared.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+bpf_call_t bpf_get_call(uint32_t num)
+{
+	switch(num) {
 #define XX(function_code, function_name, return_type, ...)                                                             \
-	static return_type (*function_name)(__VA_ARGS__) = (return_type(*)(__VA_ARGS__))function_code;
-BPF_SYSCALL_MAP(XX)
-#undef XX
-
-#ifdef __cplusplus
+	case function_code:                                                                                                \
+		return reinterpret_cast<bpf_call_t>(rBPF::VM::function_name);
+		BPF_SYSCALL_MAP(XX)
+	default:
+		return nullptr;
+	}
 }
-#endif
-
-#endif /* BPF_APPLICATION_CALL_H */
