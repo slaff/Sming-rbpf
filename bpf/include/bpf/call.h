@@ -36,11 +36,22 @@ BPF_SYSCALL_MAP(XX)
 extern "C" {
 #endif
 
+/**
+ * @brief System call implementation prototype
+ * 
+ * All calls must accept bpf parameter and from 0 to 5 parameters.
+ */
 typedef uint32_t (*bpf_call_t)(bpf_t* bpf, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5);
 
+/**
+ * @brief Map function code to system call
+ * @param num Functdion code
+ * @retval bpf_call_t Pointer to implementation, or NULL if not available
+ */
 bpf_call_t bpf_get_call(uint32_t num);
 
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* BPF_CALL_H */

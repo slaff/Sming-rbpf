@@ -18,7 +18,7 @@
 int bpf_verify_preflight(bpf_t *bpf)
 {
     const bpf_instruction_t *application = rbpf_text(bpf);
-    size_t length = rbpf_text_len(bpf);
+    size_t length = rbpf_header(bpf).text_len;
     if (bpf->flags & BPF_FLAG_PREFLIGHT_DONE) {
         return BPF_OK;
     }

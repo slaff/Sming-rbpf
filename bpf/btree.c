@@ -22,7 +22,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <debug_progmem.h>
-#include "btree.h"
+#include "include/bpf/btree.h"
 
 static void _path_helper(btree_node_t *node, size_t depth, void *ctx)
 {
