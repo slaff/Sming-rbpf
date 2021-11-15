@@ -41,36 +41,59 @@ String getErrorString(int error)
 	}
 };
 
-bool VirtualMachine::init(const Container& container)
+VirtualMachine::VirtualMachine() : locals(*this)
+{
+}
+
+VirtualMachine::~VirtualMachine()
+{
+	unload();
+}
+
+bool VirtualMachine::load(const Container& container, size_t stackSize)
 {
 	check_init();
 
-	appBinary.reset(new uint8_t[container.size()]);
-	if(!appBinary) {
-		return false;
-	}
-	container.readFlash(0, appBinary.get(), container.size());
+	unload();
 
-	inst.reset(new uint8_t[sizeof(bpf_t)]);
-	if(!inst) {
-		return false;
+	this->container = &container;
+
+	if(stackSize != this->stackSize) {
+		stack.reset(new uint8_t[stackSize]);
+		if(!stack) {
+			debug_e("[VM] No memory for stack");
+			return false;
+		}
+		this->stackSize = stackSize;
 	}
 
-	// auto bpf = reinterpret_cast<bpf_t*>(inst.get());
-	auto bpf = new(inst.get()) bpf_t({
-		.application = appBinary.get(),
+	inst.reset(new struct bpf_s({
+		.application = container.data(),
 		.application_len = container.length(),
-		.stack = stack,
-		.stack_size = sizeof(stack),
-	});
+		.stack = stack.get(),
+		.stack_size = stackSize,
+	}));
+	if(bpf_setup(inst.get()) < 0) {
+		debug_e("[VM] Init failed");
+		inst.reset();
+		return false;
+	}
 
-	bpf_setup(bpf);
 	return true;
+}
+
+void VirtualMachine::unload()
+{
+	if(inst) {
+		bpf_destroy(inst.get());
+		inst.reset();
+	}
+	lastError = 0;
 }
 
 int64_t VirtualMachine::execute(void* ctx, size_t ctxLength)
 {
-	if(!appBinary || !inst) {
+	if(!inst) {
 		return RBPF_NO_MEMORY;
 	}
 

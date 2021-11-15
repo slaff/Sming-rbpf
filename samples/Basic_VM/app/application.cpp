@@ -63,22 +63,24 @@ void test_multiply()
 void test_store()
 {
 	Serial.println(F("Calling 'store()' in VM"));
-	rBPF::VirtualMachine vm(rBPF::Container::store);
+	rBPF::VirtualMachine vm(rBPF::Container::store, 32);
 	vm.globals[1] = 1234;
 	vm.locals[2] = 5678;
-	auto res = vm.execute(nullptr, 0);
-	if(vm.getLastError() == 0) {
-		Serial.print(_F("output ("));
-		Serial.print(vm.globals[1]);
-		Serial.print(", ");
-		Serial.print(vm.locals[2]);
-		uint32_t value1 = res >> 32;
-		uint32_t value2 = res;
-		Serial.print(_F("), result ("));
-		Serial.print(value1);
-		Serial.print(", ");
-		Serial.print(value2);
-		Serial.println(")");
+	for(unsigned i = 0; i < 3; ++i) {
+		auto res = vm.execute(nullptr, 0);
+		if(vm.getLastError() == 0) {
+			Serial.print(_F("output ("));
+			Serial.print(vm.globals[1]);
+			Serial.print(", ");
+			Serial.print(vm.locals[2]);
+			uint32_t value1 = res >> 32;
+			uint32_t value2 = res;
+			Serial.print(_F("), result ("));
+			Serial.print(value1);
+			Serial.print(", ");
+			Serial.print(value2);
+			Serial.println(")");
+		}
 	}
 }
 

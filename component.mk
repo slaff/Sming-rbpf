@@ -1,4 +1,9 @@
+# The folder where the container application source code is stored.
+RBPF_CONTAINER_PATH ?= container
+RBPF_CONTAINER_PATH := $(call AbsoluteSourcePath,$(PROJECT_DIR),$(RBPF_CONTAINER_PATH))
+
 COMPONENT_INCDIRS := \
+	$(RBPF_CONTAINER_PATH)/include \
 	src/include \
 	bpf/include
 
@@ -21,9 +26,6 @@ COMPONENT_DOXYGEN_INPUT := src/include
 
 RBPF_COMPONENT_PATH := $(COMPONENT_PATH)
 export RBPF_GENRBF := $(PYTHON) $(COMPONENT_PATH)/tools/gen_rbf.py $(if $(V),--verbose)
-
-# The folder where the container application source code is stored.
-RBPF_CONTAINER_PATH ?= $(PROJECT_DIR)/container
 
 ##@rBPF containers
 

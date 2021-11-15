@@ -95,4 +95,5 @@ sharing values between instances.
 See also
 --------
 
-[rBPF paper](https://hal.inria.fr/hal-03019639)
+- `rBPF paper <https://hal.inria.fr/hal-03019639>`__
+- `Linux BPF Documentation <https://www.kernel.org/doc/html/latest/bpf/index.html>`__

@@ -7,13 +7,14 @@ import itertools
 
 MAGIC = int.from_bytes(b'rBPF', "little")
 
-HEADER_STRUCT = struct.Struct('<IIIIIII')
-HEADER = namedtuple('Header', 'magic version flags data_len rodata_len text_len functions_len')
+HEADER_STRUCT = struct.Struct('<8I')
+HEADER = namedtuple('Header', 'magic version flags data_len bss_len rodata_len text_len functions_len')
 
 SYMBOL_STRUCT = struct.Struct('<HHH')
 SYMBOL = namedtuple('Symbol', 'name_offset flags location_offset')
 
 TEXT = '.text'
+BSS = '.bss'
 DATA = '.data'
 RODATA = '.rodata'
 SYMBOLS = '.symtab'
@@ -30,10 +31,11 @@ class Symbol(object):
 class RBF(object):
 
 
-    def __init__(self, data, rodata, text, symbols, header=None):
+    def __init__(self, data, bss_len, rodata, text, symbols, header=None):
         self.data = data
         self.rodata = rodata
         self.text = text
+        self.bss_len = bss_len
         self.header = header
         if header:
             self.flags = self.header.flags
@@ -92,9 +94,10 @@ class RBF(object):
         print(f"Magic:\t\t{hex(self.header.magic)}\n"
               f"Version:\t{self.header.version}\n"
               f"flags:\t{hex(self.flags)}\n"
-              f"Data length:\t{self.header.data_len} B\n"
-              f"RoData length:\t{self.header.rodata_len} B\n"
-              f"Text length:\t{self.header.text_len} B\n"
+              f"DATA length:\t{self.header.data_len} B\n"
+              f"BSS length:\t{self.header.bss_len} B\n"
+              f"RODATA length:\t{self.header.rodata_len} B\n"
+              f"TEXT length:\t{self.header.text_len} B\n"
               f"No. functions:\t{self.header.functions_len}\n"
               )
         print("functions:")
@@ -121,7 +124,7 @@ class RBF(object):
 
     def format(self):
         if not self.header:
-            self.header = HEADER(MAGIC, 0, 0, len(self.data), len(self.rodata),
+            self.header = HEADER(MAGIC, 0, 0, len(self.data), self.bss_len, len(self.rodata),
                                  len(self.text), len(self.symbols))
 
         data = bytearray(HEADER_STRUCT.pack(*self.header))
@@ -168,36 +171,50 @@ class RBF(object):
                 SYMBOL._make(SYMBOL_STRUCT.unpack_from(syms, 0))
             )
             syms = syms[SYMBOL_STRUCT.size:]
-        return RBF(data, rodata, text, syms_array, header)
+        return RBF(data=data, bss_len=header.bss_len, rodata=rodata, text=text, symbols=syms_array, header=header)
 
 
     @staticmethod
-    def _get_section_lddw_opcode(section):
-        if section == RODATA:
-            return instructions.LDDWR_OPCODE
-        if section == DATA:
-            return instructions.LDDWD_OPCODE
-        raise RuntimeError(f'Invalid section found {section}')
-
-    @staticmethod
-    def _patch_text(text, elffile, relocation):
+    def _patch_text(text, elffile, relocation, data_len, bss_len, rodata):
+        rodata_len = len(rodata)
         entry = relocation.entry
         location = entry.r_offset
         symbols = elffile.get_section_by_name(SYMBOLS)
         symbol = symbols.get_symbol(entry.r_info_sym)
+
         if symbol.entry.st_info.type == 'STT_SECTION':
             # refers to an offset in a section
-            section_name = elffile.get_section(symbol.entry.st_shndx).name
+            section = elffile.get_section(symbol.entry.st_shndx)
             offset = 0
         elif symbol.entry.st_info.type == 'STT_OBJECT':
-            section_name = elffile.get_section(symbol.entry.st_shndx).name
+            section = elffile.get_section(symbol.entry.st_shndx)
             offset = symbol.entry.st_value
-        opcode = RBF._get_section_lddw_opcode(section_name)
+
+        if section.name == RODATA:
+            offset += 0
+            opcode = instructions.LDDWR_OPCODE
+            opcode_name = 'LDDWR'
+        elif section.name.startswith(RODATA):
+            logging.info(f"Tacking {section.name} onto RODATA")
+            offset += rodata_len
+            rodata += bytearray(section.data())
+            opcode = instructions.LDDWR_OPCODE
+            opcode_name = 'LDDWR'
+        elif section.name == DATA:
+            offset += 0
+            opcode = instructions.LDDWD_OPCODE
+        elif section.name == BSS:
+            offset += data_len
+            opcode = instructions.LDDWD_OPCODE
+        else:
+            raise RuntimeError(f"Bad section {section_name}")
+
         if text[location] != instructions.LDDW_OPCODE:
             logging.error(f"No LDDW instruction at {hex(location)}")
         else:
             instruction = instructions.LDDW._make(instructions.LDDW_STRUCT.unpack_from(text, location))
-            logging.info(f"Replacing {instruction} at {location} with {opcode} at {offset} in section {section_name}")
+            opcode_name = 'LDDWD' if opcode == instructions.LDDWD_OPCODE else 'LDDWR'
+            logging.info(f"Replacing {instruction} at {location} with {opcode_name} at {offset} in section {section.name}")
             text[location:location+16] = instructions.LDDW_STRUCT.pack(
                 opcode,
                 instruction.registers,
@@ -217,6 +234,7 @@ class RBF(object):
         relocations = elffile.get_section_by_name(RELOCATIONS)
         elf_text = elffile.get_section_by_name(TEXT)
         elf_data = elffile.get_section_by_name(DATA)
+        elf_bss = elffile.get_section_by_name(BSS)
         elf_rodata = elffile.get_section_by_name(RODATA)
         if not elf_rodata:
             rodata = bytearray()
@@ -230,6 +248,7 @@ class RBF(object):
             data = bytearray()
         else:
             data = bytearray(elf_data.data())
+        bss_len = elf_bss.data_size if elf_bss else 0
 
         symbols = elffile.get_section_by_name(SYMBOLS)
 
@@ -266,6 +285,6 @@ class RBF(object):
                     section = elffile.get_section(symbol.entry.st_shndx)
                     logging.info(f"relocation at instruction {hex(entry['r_offset'])} for symbol {name} in {section.name} at {symbol.entry.st_value}")
 
-                RBF._patch_text(text, elffile, relocation)
+                RBF._patch_text(text, elffile, relocation, len(data), bss_len, rodata)
 
-        return RBF(data=data, rodata=rodata, text=text, symbols=symbol_structs)
+        return RBF(data=data, bss_len=bss_len, rodata=rodata, text=text, symbols=symbol_structs)

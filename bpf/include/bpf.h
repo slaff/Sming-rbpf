@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "btree.h"
 
 #ifdef __cplusplus
@@ -49,6 +50,7 @@ typedef struct __attribute__((packed)) {
     uint32_t version;    /**< Version of the application */
     uint32_t flags;
     uint32_t data_len;   /**< Length of the data section */
+    uint32_t bss_len;    /**< Length of the BSS section */
     uint32_t rodata_len; /**< Length of the rodata section */
     uint32_t text_len;   /**< Length of the text section */
     uint32_t functions;  /**< Number of functions available */
@@ -96,6 +98,7 @@ typedef struct bpf_mem_region bpf_mem_region_t;
 struct bpf_mem_region {
     bpf_mem_region_t *next;
     const uint8_t *start;
+    const uint8_t *phys_start;
     size_t len;
     uint8_t flag;
 };
@@ -104,15 +107,17 @@ struct bpf_mem_region {
 #define BPF_FLAG_PREFLIGHT_DONE    0x02
 #define BPF_CONFIG_NO_RETURN       0x0100 /**< Script doesn't need to have a return */
 
-typedef struct {
-    bpf_mem_region_t stack_region;
-    bpf_mem_region_t rodata_region;
-    bpf_mem_region_t data_region;
-    bpf_mem_region_t arg_region;
+typedef struct bpf_s {
+    // Initialised by application
     const uint8_t *application; /**< Application bytecode */
     size_t application_len;     /**< Application length */
     uint8_t *stack;             /**< VM stack, must be a multiple of 8 bytes and aligned */
     size_t stack_size;          /**< VM stack size in bytes */
+    // Initialised by bpf_setup()
+    bpf_mem_region_t stack_region;
+    bpf_mem_region_t rodata_region;
+    bpf_mem_region_t data_region;
+    bpf_mem_region_t arg_region;
     btree_t btree;              /**< Local btree */
     uint16_t flags;
     uint32_t branches_remaining; /**< Number of allowed branch instructions remaining */
@@ -128,7 +133,8 @@ struct bpf_hook {
 };
 
 void bpf_init(void);
-void bpf_setup(bpf_t *bpf);
+int bpf_setup(bpf_t *bpf);
+void bpf_destroy(bpf_t *bpf);
 
 int bpf_verify_preflight(bpf_t *bpf);
 
@@ -145,33 +151,32 @@ void bpf_add_region(bpf_t *bpf, bpf_mem_region_t *region,
 int bpf_store_allowed(const bpf_t *bpf, void *addr, size_t size);
 int bpf_load_allowed(const bpf_t *bpf, void *addr, size_t size);
 
-static inline rbpf_header_t *rbpf_header(const bpf_t *bpf)
+static inline rbpf_header_t rbpf_header(const bpf_t *bpf)
 {
-    return (rbpf_header_t*)bpf->application;
+    rbpf_header_t hdr;
+    memcpy(&hdr, bpf->application, sizeof(hdr));
+    return hdr;
 }
 
-static inline void *rbpf_rodata(const bpf_t *bpf)
+static inline const void *rbpf_rodata(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return (uint8_t*)header + sizeof(rbpf_header_t) + header->data_len;
+    return bpf->application + sizeof(rbpf_header_t) + rbpf_header(bpf).data_len;
 }
 
-static inline void *rbpf_data(const bpf_t *bpf)
+static inline const void *rbpf_data(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return (uint8_t*)header + sizeof(rbpf_header_t);
+    return bpf->application + sizeof(rbpf_header_t);
 }
 
-static inline void *rbpf_text(const bpf_t *bpf)
+static inline const void *rbpf_text(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return (uint8_t*)header + sizeof(rbpf_header_t) + header->data_len + header->rodata_len;
+    rbpf_header_t header = rbpf_header(bpf);
+    return bpf->application + sizeof(rbpf_header_t) + header.data_len + header.rodata_len;
 }
 
 static inline size_t rbpf_text_len(const bpf_t *bpf)
 {
-    rbpf_header_t *header = rbpf_header(bpf);
-    return header->text_len;
+    return rbpf_header(bpf).text_len;
 }
 
 #ifdef __cplusplus

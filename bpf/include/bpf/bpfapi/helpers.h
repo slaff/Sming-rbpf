@@ -21,40 +21,44 @@ extern "C" {
 
 typedef signed ssize_t;
 
+#define DEFINE_SYSCALL(syscall_id, ResultType, name, ...) \
+    static ResultType (*name)(__VA_ARGS__) = (ResultType(*)(__VA_ARGS__))syscall_id;
+
+
 /**
  * Opaque dummy type saul registration
  */
 typedef void bpf_saul_reg_t;
 
-static void *(*bpf_printf)(const char *fmt, ...) = (void *) BPF_FUNC_BPF_PRINTF;
+DEFINE_SYSCALL(BPF_FUNC_BPF_PRINTF, void, bpf_printf, const char *, ...)
 
-static int (*bpf_store_global)(uint32_t key, uint32_t value) = (void *) BPF_FUNC_BPF_STORE_GLOBAL;
-static int (*bpf_store_local)(uint32_t key, uint32_t value) = (void *) BPF_FUNC_BPF_STORE_LOCAL;
-static int (*bpf_fetch_global)(uint32_t key, uint32_t *value) = (void *) BPF_FUNC_BPF_FETCH_GLOBAL;
-static int (*bpf_fetch_local)(uint32_t key, uint32_t *value) = (void *) BPF_FUNC_BPF_FETCH_LOCAL;
-static uint32_t (*bpf_now_ms)(void) = (void *) BPF_FUNC_BPF_NOW_MS;
+DEFINE_SYSCALL(BPF_FUNC_BPF_STORE_GLOBAL, int, bpf_store_global, uint32_t key, uint32_t value)
+DEFINE_SYSCALL(BPF_FUNC_BPF_STORE_LOCAL, int, bpf_store_local, uint32_t key, uint32_t value)
+DEFINE_SYSCALL(BPF_FUNC_BPF_FETCH_GLOBAL, int, bpf_fetch_global, uint32_t key, uint32_t *value)
+DEFINE_SYSCALL(BPF_FUNC_BPF_FETCH_LOCAL, int, bpf_fetch_local, uint32_t key, uint32_t *value)
+DEFINE_SYSCALL(BPF_FUNC_BPF_NOW_MS, uint32_t, bpf_now_ms, void)
 
 /* STDLIB */
-static void *(*bpf_memcpy)(void *dest, const void *src, size_t n) = (void *) BPF_FUNC_BPF_MEMCPY;
+DEFINE_SYSCALL(BPF_FUNC_BPF_MEMCPY, void, bpf_memcpy, void *dest, const void *src, size_t n)
 
 /* SAUL calls */
-static bpf_saul_reg_t *(*bpf_saul_reg_find_nth)(int pos) = (void *) BPF_FUNC_BPF_SAUL_REG_FIND_NTH;
-static bpf_saul_reg_t *(*bpf_saul_reg_find_type)(uint8_t type) = (void *) BPF_FUNC_BPF_SAUL_REG_FIND_TYPE;
-static int (*bpf_saul_reg_read)(bpf_saul_reg_t *dev, phydat_t *data) = (void *) BPF_FUNC_BPF_SAUL_REG_READ;
+DEFINE_SYSCALL(BPF_FUNC_BPF_SAUL_REG_FIND_NTH, bpf_saul_reg_t *, bpf_saul_reg_find_nth, int pos)
+DEFINE_SYSCALL(BPF_FUNC_BPF_SAUL_REG_FIND_TYPE, bpf_saul_reg_t *, bpf_saul_reg_find_type, uint8_t type)
+DEFINE_SYSCALL(BPF_FUNC_BPF_SAUL_REG_READ, int , bpf_saul_reg_read, bpf_saul_reg_t *dev, phydat_t *data)
 
 /* CoAP calls */
-static void (*bpf_gcoap_resp_init)(bpf_coap_ctx_t *ctx, unsigned resp_code) = (void *) BPF_FUNC_BPF_GCOAP_RESP_INIT;
-static ssize_t (*bpf_coap_opt_finish)(bpf_coap_ctx_t *ctx, unsigned opt) = (void *) BPF_FUNC_BPF_COAP_OPT_FINISH;
-static void (*bpf_coap_add_format)(bpf_coap_ctx_t *ctx, uint32_t format) = (void *) BPF_FUNC_BPF_COAP_ADD_FORMAT;
-static uint8_t *(*bpf_coap_get_pdu)(bpf_coap_ctx_t *ctx) = (void *) BPF_FUNC_BPF_COAP_GET_PDU;
+DEFINE_SYSCALL(BPF_FUNC_BPF_GCOAP_RESP_INIT, void , bpf_gcoap_resp_init, bpf_coap_ctx_t *ctx, unsigned resp_code)
+DEFINE_SYSCALL(BPF_FUNC_BPF_COAP_OPT_FINISH, ssize_t , bpf_coap_opt_finish, bpf_coap_ctx_t *ctx, unsigned opt)
+DEFINE_SYSCALL(BPF_FUNC_BPF_COAP_ADD_FORMAT, void , bpf_coap_add_format, bpf_coap_ctx_t *ctx, uint32_t format)
+DEFINE_SYSCALL(BPF_FUNC_BPF_COAP_GET_PDU, uint8_t *, bpf_coap_get_pdu, bpf_coap_ctx_t *ctx)
 
 /* FMT calls */
-static size_t (*bpf_fmt_s16_dfp)(char *out, int16_t val, int fp_digits) = (void *) BPF_FUNC_BPF_FMT_S16_DFP;
-static size_t (*bpf_fmt_u32_dec)(char *out, uint32_t val) = (void *) BPF_FUNC_BPF_FMT_U32_DEC;
+DEFINE_SYSCALL(BPF_FUNC_BPF_FMT_S16_DFP, size_t , bpf_fmt_s16_dfp, char *out, int16_t val, int fp_digits)
+DEFINE_SYSCALL(BPF_FUNC_BPF_FMT_U32_DEC, size_t , bpf_fmt_u32_dec, char *out, uint32_t val)
 
 /* ZTIMER calls */
-static uint32_t (*bpf_ztimer_now)(void) = (void *) BPF_FUNC_BPF_ZTIMER_NOW;
-static void (*bpf_ztimer_periodic_wakeup)(uint32_t *last_wakeup, uint32_t period) = (void *) BPF_FUNC_BPF_ZTIMER_PERIODIC_WAKEUP;
+DEFINE_SYSCALL(BPF_FUNC_BPF_ZTIMER_NOW, uint32_t , bpf_ztimer_now, void)
+DEFINE_SYSCALL(BPF_FUNC_BPF_ZTIMER_PERIODIC_WAKEUP, void , bpf_ztimer_periodic_wakeup, uint32_t *last_wakeup, uint32_t period)
 
 #ifdef __cplusplus
 

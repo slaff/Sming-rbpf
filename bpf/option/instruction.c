@@ -152,7 +152,7 @@ static int _ld(const bpf_instruction_t **pc, uint64_t *src, uint64_t *dst)
 {
     (void)src;
     const bpf_instruction_t *instruction = *pc;
-    uint8_t opcode = instruction->opcode;
+    uint8_t opcode = GET_INSTRUCTION(instruction).opcode;
 
     switch(opcode) {
         case 0x18: /* LDDW */
@@ -205,7 +205,7 @@ static int _jump_cond(uint8_t opcode, uint64_t *src, uint64_t *dst)
 
 static int _jump(const bpf_instruction_t **pc, uint64_t *src, uint64_t *dst)
 {
-    const bpf_instruction_t *instruction = *pc;
+    bpf_instruction_t instruction = GET_INSTRUCTION(*pc);
 
     int res = _jump_cond(instruction->opcode, src, dst);
     if (res < 0) {
@@ -305,30 +305,30 @@ static int _instruction(bpf_t *bpf, uint64_t *regmap,
                         const bpf_instruction_t **pc)
 {
     (void)bpf;
-    const bpf_instruction_t *instruction = *pc;
+    bpf_instruction_t instruction = GET_INSTRUCTION(*pc);
 
     /* Setup values for alu-based instructions */
-    int64_t immediate = instruction->immediate;
-    uint64_t *dst = &regmap[instruction->dst];
-    uint64_t *src = (instruction->opcode & BPF_INSTRUCTION_ALU_S_MASK) ?
-        &regmap[instruction->src] :
+    int64_t immediate = instruction.immediate;
+    uint64_t *dst = &regmap[instruction.dst];
+    uint64_t *src = (instruction.opcode & BPF_INSTRUCTION_ALU_S_MASK) ?
+        &regmap[instruction.src] :
         (uint64_t*)&immediate;
 
-    switch (instruction->opcode & BPF_INSTRUCTION_CLS_MASK) {
+    switch (instruction.opcode & BPF_INSTRUCTION_CLS_MASK) {
         case BPF_INSTRUCTION_CLS_ALU64:
-            return _alu64(instruction->opcode, src, dst);
+            return _alu64(instruction.opcode, src, dst);
         case BPF_INSTRUCTION_CLS_ALU32:
-            return _alu32(instruction->opcode, src, dst);
+            return _alu32(instruction.opcode, src, dst);
         case BPF_INSTRUCTION_CLS_BRANCH:
             return _jump(pc, src, dst);
         case BPF_INSTRUCTION_CLS_LD:
             return _ld(pc, src, dst);
         case BPF_INSTRUCTION_CLS_ST:
-            return _store(bpf, instruction, regmap);
+            return _store(bpf, &instruction, regmap);
         case BPF_INSTRUCTION_CLS_STX:
-            return _store_x(bpf, instruction, regmap);
+            return _store_x(bpf, &instruction, regmap);
         case BPF_INSTRUCTION_CLS_LDX:
-            return _load_x(bpf, instruction, regmap);
+            return _load_x(bpf, &instruction, regmap);
         default:
             return BPF_ILLEGAL_INSTRUCTION;
     }
@@ -340,7 +340,6 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
     uint64_t regmap[11] = { 0 };
     regmap[1] = (uint64_t)(uintptr_t)ctx;
     regmap[10] = (uint64_t)(uintptr_t)(bpf->stack + bpf->stack_size);
-    bool end = false;
 
     res = bpf_verify_preflight(bpf);
     if (res < 0) {
@@ -349,12 +348,13 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
 
     const bpf_instruction_t *pc = (const bpf_instruction_t*)bpf->application;
 
-    while (!end) {
+    do {
         int res = _instruction(bpf, regmap, &pc);
         bpf->instruction_count++;
         if (res < 0) {
-            if (pc->opcode == 0x85) {
-                bpf_call_t call = _bpf_get_call(pc->immediate);
+            bpf_instruction_t inst = GET_INSTRUCTION(pc);
+            if (inst.opcode == 0x85) {
+                bpf_call_t call = _bpf_get_call(inst.immediate);
                 if (call) {
                     regmap[0] = (*(call))(bpf,
                                           regmap[1],
@@ -367,7 +367,7 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
                     return BPF_ILLEGAL_CALL;
                 }
             }
-            else if (pc->opcode == 0x95) {
+            else if (inst.opcode == 0x95) {
                 break;
             }
             else {
@@ -377,10 +377,7 @@ int bpf_run(bpf_t *bpf, const void *ctx, int64_t *result)
             }
         }
         pc++;
-        if ((uint8_t*)pc >= (bpf->application + bpf->application_len)) {
-            end = true;
-        }
-    }
+    } while ((uint8_t*)pc < (bpf->application + bpf->application_len));
 
     debug_d("Number of instructions: %d\n", bpf->instruction_count);
     *result = regmap[0];
