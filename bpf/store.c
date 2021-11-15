@@ -9,9 +9,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "btree.h"
-#include "bpf.h"
-#include "bpf/store.h"
+#include "include/bpf.h"
+#include "include/bpf/store.h"
 #include "memarray.h"
 
 static btree_t _global;

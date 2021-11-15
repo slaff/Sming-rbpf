@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "btree.h"
+#include "bpf/btree.h"
 
 #ifdef __cplusplus
 extern "C" {
