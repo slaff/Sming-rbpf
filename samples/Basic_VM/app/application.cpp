@@ -62,12 +62,17 @@ void test_multiply()
  */
 void test_store()
 {
+	constexpr unsigned callCount{100};
+	unsigned elapsed{0};
+
 	Serial.println(F("Calling 'store()' in VM"));
 	rBPF::VirtualMachine vm(rBPF::Container::store, 32);
 	vm.globals[1] = 1234;
 	vm.locals[2] = 5678;
-	for(unsigned i = 0; i < 3; ++i) {
+	for(unsigned i = 0; i < callCount; ++i) {
+		CpuCycleTimer timer;
 		auto res = vm.execute(nullptr, 0);
+		elapsed += timer.elapsedTicks();
 		if(vm.getLastError() == 0) {
 			Serial.print(_F("output ("));
 			Serial.print(vm.globals[1]);
@@ -82,6 +87,15 @@ void test_store()
 			Serial.println(")");
 		}
 	}
+
+/*
+63984909 BPF_USE_JUMPTABLE = 0
+63965820 BPF_USE_JUMPTABLE = 1
+*/
+	Serial.print(callCount);
+	Serial.print(_F(" calls took "));
+	Serial.print(elapsed);
+	Serial.println(_F(" cycles"));
 }
 
 } // namespace
@@ -91,7 +105,7 @@ void init()
 	Serial.begin(SERIAL_BAUD_RATE);
 	Serial.systemDebugOutput(true); // Allow debug print to serial
 
-	Serial.println("All up, running the Femto-Container application now");
+	Serial.println(_F("All up, running the Femto-Container application now"));
 
 	test_increment();
 	test_multiply();

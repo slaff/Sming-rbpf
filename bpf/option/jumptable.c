@@ -17,32 +17,6 @@
 
 #include <debug_progmem.h>
 
-static void* _get_mem(const bpf_t *bpf, uint8_t size, const intptr_t addr, uint8_t type)
-{
-    const intptr_t end = addr + size;
-    for (const bpf_mem_region_t *region = &bpf->stack_region; region; region = region->next) {
-        if ((addr >= (intptr_t)(region->start)) &&
-                (end <= (intptr_t)(region->start + region->len)) &&
-                (region->flag & type)) {
-
-            return (void*)(region->phys_start + addr - region->start);
-        }
-    }
-
-    debug_d("Denied access to %p with len %u\n",(void*)addr, size);
-    return NULL;
-}
-
-int bpf_store_allowed(const bpf_t *bpf, void *addr, size_t size)
-{
-    return _get_mem(bpf, size, (intptr_t)addr, BPF_MEM_REGION_WRITE) != NULL;
-}
-
-int bpf_load_allowed(const bpf_t *bpf, void *addr, size_t size)
-{
-    return _get_mem(bpf, size, (intptr_t)addr, BPF_MEM_REGION_READ) != NULL;
-}
-
 /**
  * This is a set of macros to easily implement the similar eBPF instructions
  */
@@ -350,21 +324,21 @@ MEM_LDDWR_IMM:
 
 #define MEM(SIZEOP, SIZE)                     \
       MEM_STX_##SIZEOP:                       \
-          memptr = _get_mem(bpf, sizeof(SIZE), DST + instr.offset, BPF_MEM_REGION_WRITE); \
+          memptr = bpf_get_mem(bpf, sizeof(SIZE), DST + instr.offset, BPF_MEM_REGION_WRITE); \
           if (memptr == NULL) { \
               goto mem_error; \
           } \
           *(SIZE*)memptr = SRC; \
           CONT;                               \
       MEM_ST_##SIZEOP:                        \
-          memptr = _get_mem(bpf, sizeof(SIZE), DST + instr.offset, BPF_MEM_REGION_WRITE); \
+          memptr = bpf_get_mem(bpf, sizeof(SIZE), DST + instr.offset, BPF_MEM_REGION_WRITE); \
           if (memptr == NULL) { \
               goto mem_error; \
           } \
           *(SIZE*)memptr = IMM; \
           CONT;                               \
       MEM_LDX_##SIZEOP:                       \
-          memptr = _get_mem(bpf, sizeof(SIZE), SRC + instr.offset, BPF_MEM_REGION_READ); \
+          memptr = bpf_get_mem(bpf, sizeof(SIZE), SRC + instr.offset, BPF_MEM_REGION_READ); \
           if (memptr == NULL) { \
               goto mem_error; \
           } \
