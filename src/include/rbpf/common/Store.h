@@ -41,13 +41,33 @@ public:
 		bool valid;
 	};
 
+	/**
+	 * @brief Update value in store
+	 * @param key
+	 * @param value
+	 * @retval bool true on success, false if store is full
+	 */
 	virtual bool update(Key key, Value value) = 0;
+
+	/**
+	 * @brief Fetch value from store
+	 * @param key
+	 * @param value
+	 * @retval bool true on success, false if store is full
+	 * 
+	 * If key is not found in the store then its added and set to 0.
+	 */
 	virtual bool fetch(Key key, Value& value) = 0;
 
-	Value get(Key key, Value defaultValue = 0)
+	/**
+	 * @brief Fetch value from store
+	 * @param key
+	 */
+	Value get(Key key)
 	{
 		Value res;
-		return fetch(key, res) ? res : defaultValue;
+		fetch(key, res);
+		return res;
 	}
 
 	Entry operator[](Key key)

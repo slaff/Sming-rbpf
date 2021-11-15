@@ -39,30 +39,58 @@ extern "C" {
  * @brief eBPF key-value object
  */
 typedef struct {
-    btree_node_t node; /**< Binary search tree node */
-    uint32_t value;     /**< Value */
+    btree_node_t node;  ///< Binary search tree node
+    uint32_t value;     ///< Value
 } bpf_store_keyval_t;
 
-static inline uint32_t bpf_store_get_key(bpf_store_keyval_t *keyval)
-{
-    return btree_node_key(&keyval->node);
-}
-
-static inline uint32_t bpf_store_get_value(bpf_store_keyval_t *keyval)
-{
-    return keyval->value;
-}
-
-static inline void bpf_store_set_value(bpf_store_keyval_t *keyval, uint32_t val)
-{
-    keyval->value = val;
-}
-
+/**
+ * @brief Initialise global store
+ * 
+ * Called by bpf_init()
+ */
 void bpf_store_init(void);
+
+/**
+ * @param Update key value in global store
+ * @param key
+ * @param value
+ * @retval int error code
+ */
 int bpf_store_update_global(uint32_t key, uint32_t value);
+
+/**
+ * @brief Update key value in local store
+ * @param key
+ * @param value
+ * @retval int error code
+ */
 int bpf_store_update_local(bpf_t *bpf, uint32_t key, uint32_t value);
+
+/**
+ * @brief Read value from global store
+ * @param key
+ * @param value Points to variable to receive value
+ * @retval int error code
+ * 
+ * If value doesn't exist, add it with default value (0)
+ */
 int bpf_store_fetch_global(uint32_t key, uint32_t *value);
+
+/**
+ * @brief Read value from local store
+ * @param key
+ * @param value Points to variable to receive value
+ * @retval int error code
+ * 
+ * If value doesn't exist, add it with default value (0)
+ */
 int bpf_store_fetch_local(bpf_t *bpf, uint32_t key, uint32_t *value);
+
+/**
+ * @brief Iterate through all values in global store
+ * @param cb Callback to invoke for each value
+ * @param ctx Passed to callback
+ */
 void bpf_store_iter_global(btree_cb_t cb, void *ctx);
 
 #ifdef __cplusplus

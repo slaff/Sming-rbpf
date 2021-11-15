@@ -51,8 +51,6 @@ static int _execute(bpf_t *bpf, void *ctx, int64_t *result)
 
 int bpf_execute(bpf_t *bpf, void *ctx, size_t ctx_len, int64_t *result)
 {
-    (void)ctx;
-    (void)ctx_len;
     bpf->arg_region.start = NULL;
     bpf->arg_region.len = 0;
 
@@ -74,38 +72,54 @@ int bpf_setup(bpf_t *bpf)
         return -1;
     }
 
-    bpf->stack_region.start = bpf->stack_region.phys_start = bpf->stack;
-    bpf->stack_region.len = bpf->stack_size;
-    bpf->stack_region.flag = (BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE);
-    bpf->stack_region.next = &bpf->data_region;
+    bpf_mem_region_t stack_region = {
+        .start = bpf->stack,
+        .phys_start = bpf->stack,
+        .len = bpf->stack_size,
+        .flag = BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE,
+        .next = &bpf->data_region,
+    };
+    bpf->stack_region = stack_region;
 
     rbpf_header_t hdr = rbpf_header(bpf);
 
     size_t len = ALIGNUP4(hdr.data_len + hdr.bss_len);
     if(len == 0) {
-        bpf->data_region.start = bpf->data_region.phys_start = NULL;
+        bpf_mem_region_t data_region = {
+            .next = &bpf->rodata_region,
+        };
+        bpf->data_region = data_region;
     } else {
-        bpf->data_region.start = rbpf_data(bpf);
+        const void* data = rbpf_data(bpf);
         uint8_t* ptr = malloc(len);
         if(ptr == NULL) {
             return -1;
         }
-        memcpy(ptr, bpf->data_region.start, ALIGNUP4(hdr.data_len));
+        memcpy(ptr, data, ALIGNUP4(hdr.data_len));
         memset(ptr + hdr.data_len, 0, hdr.bss_len);
-        bpf->data_region.phys_start = ptr;
+
+        bpf_mem_region_t data_region = {
+            .start = data,
+            .phys_start = ptr,
+            .len = len,
+            .flag = BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE,
+            .next = &bpf->rodata_region,
+        };
+        bpf->data_region = data_region;
     }
-    bpf->data_region.len = len;
-    bpf->data_region.flag = (BPF_MEM_REGION_READ | BPF_MEM_REGION_WRITE);
-    bpf->data_region.next = &bpf->rodata_region;
 
-    bpf->rodata_region.start = bpf->rodata_region.phys_start = rbpf_rodata(bpf);
-    bpf->rodata_region.len = hdr.rodata_len;
-    bpf->rodata_region.flag = BPF_MEM_REGION_READ;
-    bpf->rodata_region.next = &bpf->arg_region;
+    const void* rodata = rbpf_rodata(bpf);
+    bpf_mem_region_t rodata_region = {
+        .start =  rodata,
+        .phys_start = rodata,
+        .len = hdr.rodata_len,
+        .flag = BPF_MEM_REGION_READ,
+        .next = &bpf->arg_region,
+    };
+    bpf->rodata_region = rodata_region;
 
-    bpf->arg_region.next = NULL;
-    bpf->arg_region.start = bpf->arg_region.phys_start = NULL;
-    bpf->arg_region.len = 0;
+    bpf_mem_region_t arg_region = {};
+    bpf->arg_region = arg_region;
 
     bpf->flags |= BPF_FLAG_SETUP_DONE;
 
@@ -124,10 +138,14 @@ void bpf_destroy(bpf_t* bpf)
 void bpf_add_region(bpf_t *bpf, bpf_mem_region_t *region,
                     void *start, size_t len, uint8_t flags)
 {
-    region->next = bpf->arg_region.next;
-    region->start = start;
-    region->len = len;
-    region->flag = flags;
+    bpf_mem_region_t r = {
+        .next = bpf->arg_region.next,
+        .start = start,
+        .phys_start = start,
+        .len = len,
+        .flag = flags,
+    };
+    *region = r;
     bpf->arg_region.next = region;
 }
 

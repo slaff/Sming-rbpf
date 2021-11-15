@@ -21,17 +21,16 @@ static bpf_store_keyval_t _vals[CONFIG_BPF_STORE_NUM_VALUES];
 
 void bpf_store_init(void)
 {
-    memarray_init(&_array, _vals, sizeof(bpf_store_keyval_t),
-                  CONFIG_BPF_STORE_NUM_VALUES);
+    memarray_init(&_array, _vals, sizeof(bpf_store_keyval_t), CONFIG_BPF_STORE_NUM_VALUES);
 }
 
 static int _alloc_value(btree_t *tree, uint32_t key, uint32_t value)
 {
     bpf_store_keyval_t *keyval = memarray_alloc(&_array);
-    bpf_store_set_value(keyval, value);
-    if (!keyval) {
+    if(keyval == NULL) {
         return -1;
     }
+    keyval->value = value;
     btree_insert(tree, &keyval->node, key);
     return 0;
 }
@@ -43,7 +42,7 @@ static int _fetch_value(btree_t *tree, uint32_t key, uint32_t *value)
         *value = 0;
         return _alloc_value(tree, key, *value);
     }
-    *value = bpf_store_get_value(keyval);
+    *value = keyval->value;
     return 0;
 }
 
@@ -53,7 +52,7 @@ static int _store_value(btree_t *tree, uint32_t key, uint32_t value)
     if (!keyval) {
         return _alloc_value(tree, key, value);
     }
-    bpf_store_set_value(keyval, value);
+    keyval->value = value;
     return 0;
 }
 
@@ -69,15 +68,11 @@ int bpf_store_update_local(bpf_t *bpf, uint32_t key, uint32_t value)
 
 int bpf_store_fetch_global(uint32_t key, uint32_t *value)
 {
-/* fetch value from the global store if it exists, otherwise add it and return a
- * default value */
     return _fetch_value(&_global, key, value);
 }
 
 int bpf_store_fetch_local(bpf_t *bpf, uint32_t key, uint32_t *value)
 {
-/* fetch value from the bpf local store if it exists, otherwise add it and return a
- * default value */
     return _fetch_value(&bpf->btree, key, value);
 }
 
