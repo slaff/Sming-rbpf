@@ -10,7 +10,8 @@ This sample demonstrates how to provide application functions for use by VM cont
 
 		int bpf_user_get_magic();
 		void bpf_user_set_magic(int value);
-		void bpf_user_get_string(char* buffer, size_t length);
+		size_t bpf_user_send_packet(char* data, size_t len)                                                   \
+		size_t bpf_user_read_packet(char* buffer, size_t len)
 
 	These are declared using the :c:macro:`BPF_SYSCALL_APP` macro.
 
@@ -22,5 +23,10 @@ This sample demonstrates how to provide application functions for use by VM cont
 
 		int bpf_user_get_magic(bpf_t* bpf);
 		void bpf_user_set_magic(bpf_t* bpf, int value);
-		void bpf_user_get_string(bpf_t* bpf, char* buffer, size_t length);
+		size_t bpf_user_send_packet(bpf_t* bpf, char* data, size_t len)                                                   \
+		size_t bpf_user_read_packet(bpf_t* bpf, char* buffer, size_t len)
 
+	Note that when passing pointers these **must** be checked using either
+	:c:func:`bpf_store_allowed` or :c:func:`bpf_load_allowed`.
+
+	See ``appcalls.cpp`` for the implementations.
