@@ -9,11 +9,4 @@ menu "rBPF"
         help
             Space is shared between all stores (global and local).
 
-    config BPF_USE_JUMPTABLE
-        bool "Execute instructions using jump tables"
-        default y
-        help
-            Uses single jump table instead of function-based engine.
-            Requires slightly more flash memory, performance appears similar.
-
 endmenu
