@@ -69,12 +69,6 @@ typedef enum {
     BPF_POLICY_SINGLE,              /**< Always stop after this execution */
 } bpf_hook_policy_t;
 
-typedef enum {
-    BPF_HOOK_TRIGGER_NETIF,
-    BPF_HOOK_SCHED,
-    BPF_HOOK_NUM,
-} bpf_hook_trigger_t;
-
 enum {
     BPF_OK = 0,
     BPF_ILLEGAL_INSTRUCTION = -1,
@@ -123,15 +117,6 @@ typedef struct bpf_s {
     uint32_t branches_remaining; /**< Number of allowed branch instructions remaining */
 } bpf_t;
 
-typedef struct bpf_hook bpf_hook_t;
-
-struct bpf_hook {
-    struct bpf_hook *next;
-    bpf_t *application;
-    uint32_t executions;
-    bpf_hook_policy_t policy;
-};
-
 void bpf_init(void);
 int bpf_setup(bpf_t *bpf);
 void bpf_destroy(bpf_t *bpf);
@@ -140,10 +125,7 @@ int bpf_verify_preflight(bpf_t *bpf);
 
 int bpf_execute(bpf_t *bpf, void *ctx, size_t ctx_size, int64_t *result);
 int bpf_execute_ctx(bpf_t *bpf, void *ctx, size_t ctx_size, int64_t *result);
-int bpf_hook_execute(bpf_hook_trigger_t trigger, void *ctx, size_t ctx_size, int64_t *script_res);
-int bpf_hook_install(bpf_hook_t *hook, bpf_hook_trigger_t trigger);
 
-int bpf_install_hook(bpf_t *bpf);
 
 void bpf_add_region(bpf_t *bpf, bpf_mem_region_t *region,
                     void *start, size_t len, uint8_t flags);
