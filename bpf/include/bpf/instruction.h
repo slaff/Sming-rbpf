@@ -88,11 +88,13 @@ extern "C" {
  */
 typedef struct __attribute__((packed)) {
     uint8_t opcode;
-    unsigned dst:4;
-    unsigned src:4;
+    uint8_t dst:4;
+    uint8_t src:4;
     int16_t offset;
     int32_t immediate;
 } bpf_instruction_t;
+
+_Static_assert(sizeof(bpf_instruction_t) == 8, "bpf_instruction_t alignment error");
 
 /*
  * Make use of  strict volatile bitfield access to ensure flash accesses are aligned.

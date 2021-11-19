@@ -1,0 +1,27 @@
+environment:
+  matrix:
+  - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
+    CLONE_FOLDER: /home/appveyor/projects/rbpf
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    CLONE_FOLDER: C:\projects\rbpf
+
+clone_folder: $(CLONE_FOLDER)
+
+install:
+  - ps: |
+      $smingUrl = "https://github.com/$($env:APPVEYOR_ACCOUNT_NAME)/Sming"
+      git clone -b develop --single-branch --depth 1 "$smingUrl" sming
+      $env:CI_BUILD_DIR = $env:CLONE_FOLDER
+      $env:COMPONENT_SEARCH_DIRS = (resolve-path "$pwd/..").path
+      $env:SMING_HOME = (resolve-path "$pwd/sming/Sming").path
+      sming/Tools/ci/setenv.ps1
+      env
+
+  - cmd: |
+      sming/Tools/ci/install.cmd all
+
+  - sh: |
+      . sming/Tools/ci/install.sh all
+
+build_script:
+  - make -j2 -C tools/ci

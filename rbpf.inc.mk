@@ -25,9 +25,11 @@ CLANG ?= clang
 
 all: blobs
 
+CLANG_SYS_INCLUDE := $(call FixPath,$(shell $(CLANG) -print-file-name=include))
+
 INC_FLAGS = \
 	-nostdinc \
-	-isystem `$(CLANG) -print-file-name=include` \
+	-isystem "$(CLANG_SYS_INCLUDE)" \
 	-Iinclude \
 	-I$(RBPF_COMPONENT_DIR)/bpf/include \
 	-I$(RBPF_COMPONENT_DIR)/src/include/bpf
