@@ -9,7 +9,7 @@ See :library:`rbpf` for toolchain setup.
 
 The sample contains three functions:
 
-- ``increment()`` simply adds 1 to the paramter value and returns it.
+- ``increment()`` simply adds 1 to the parameter value and returns it.
 - ``multiply()`` instead stores the output value in the context parameters.
 - ``store()`` demonstrates parameter passing using the stores.
 

@@ -143,7 +143,7 @@ static void _balance(btree_t *btree, btree_node_t *node)
         if (balance > 1) {
             /* right/left case */
             if (child_balance < 0) {
-                /* Tranform to right/right case */
+                /* Transform to right/right case */
                 _rotate_right(btree, node->right,
                               node->right->left);
             }
@@ -155,7 +155,7 @@ static void _balance(btree_t *btree, btree_node_t *node)
         else if (balance < -1) {
             /* left/right case */
             if (child_balance > 0) {
-                /* Tranform to left/left case */
+                /* Transform to left/left case */
                 _rotate_left(btree, node->left, node->left->right);
             }
             /* left/left case */
