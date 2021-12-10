@@ -99,7 +99,7 @@
     [VALUE | 0x05] = &&JMP_##OPCODE##_IMM, \
     [VALUE | 0x0D] = &&JMP_##OPCODE##_REG
 
-/* And finaly this generates the opcode entries for memory instructions. It
+/* And finally this generates the opcode entries for memory instructions. It
  * generates the full set of size types supported by eBPF instructions */
 #define MEM_OPCODE(OPCODE, VALUE) \
     [VALUE | 0x10] = &&MEM_##OPCODE##_BYTE, \
